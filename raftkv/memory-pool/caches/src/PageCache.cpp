@@ -31,7 +31,7 @@ PageCache::~PageCache()
 
     // 释放所有对齐指针
     for (void * _Ptr : _Align_pointers) {
-        Platform::aligned_free(_Ptr);
+        Platform::alignedFree(_Ptr);
     }
 }
 
@@ -237,7 +237,7 @@ Span * PageCache::objectToSpan(void * _Ptr) noexcept
 
 void * PageCache::_FetchFromSystem(size_type _Pages) const noexcept
 {
-    return Platform::aligned_malloc(PAGE_SIZE, _Pages << PAGE_SHIFT);
+    return Platform::alignedMalloc(PAGE_SIZE, _Pages << PAGE_SHIFT);
 }
 
 } // namespace WW

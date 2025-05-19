@@ -3,7 +3,7 @@
 namespace WW
 {
 
-size_type Size::index_to_size(size_type _Index) noexcept
+size_type Size::indexToSize(size_type _Index) noexcept
 {
     if (_Index <= 15) {
         // 8 * (_Index + 1)
@@ -26,7 +26,7 @@ size_type Size::index_to_size(size_type _Index) noexcept
     }
 }
 
-size_type Size::size_to_index(size_type _Size) noexcept
+size_type Size::sizeToIndex(size_type _Size) noexcept
 {
     if (_Size <= 128) {
         // 8, 16, ..., 128 → 共16类，索引0~15
@@ -49,7 +49,7 @@ size_type Size::size_to_index(size_type _Size) noexcept
     }
 }
 
-size_type Size::round_up(size_type _Size) noexcept
+size_type Size::roundUp(size_type _Size) noexcept
 {
     if (_Size <= 128) {
         // [0, 128]，按照8字节对齐

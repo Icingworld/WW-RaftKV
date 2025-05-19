@@ -39,9 +39,9 @@ void * ThreadCache::allocate(size_type _Size) noexcept
     }
 
     // 获取对齐后的大小
-    size_type _Round_size = Size::round_up(_Size);
+    size_type _Round_size = Size::roundUp(_Size);
     // 找到所在的索引
-    size_type _Index = Size::size_to_index(_Round_size);
+    size_type _Index = Size::sizeToIndex(_Round_size);
 
     if (_Free_lists[_Index].empty()) {
         // 没有这种内存块，需要申请
@@ -67,9 +67,9 @@ void ThreadCache::deallocate(void * _Ptr, size_type _size) noexcept
     }
 
     // 获取对齐后的大小
-    size_type _Round_size = Size::round_up(_size);
+    size_type _Round_size = Size::roundUp(_size);
     // 找到所在的索引
-    size_type _Index = Size::size_to_index(_Round_size);
+    size_type _Index = Size::sizeToIndex(_Round_size);
     // 把内存插入自由表
     FreeObject * _Obj = reinterpret_cast<FreeObject *>(_Ptr);
     _Free_lists[_Index].push_front(_Obj);
@@ -93,7 +93,7 @@ bool ThreadCache::_ShouldReturn(size_type _Index) const noexcept
 void ThreadCache::_FetchFromCentralCache(size_type _Size) noexcept
 {
     // 每次申请按照最大数量申请，并且提升最大数量
-    size_type _Index = Size::size_to_index(_Size);
+    size_type _Index = Size::sizeToIndex(_Size);
     size_type _Count = _Free_lists[_Index].max_size();
     if (_Count > MAX_BLOCK_NUM) {
         _Count = MAX_BLOCK_NUM;
@@ -124,7 +124,7 @@ void ThreadCache::_ReturnToCentralCache(size_type _Index, size_type _Nums) noexc
         _Head = _Obj;
     }
 
-    CentralCache::getCentralCache().returnRange(Size::index_to_size(_Index), _Head);
+    CentralCache::getCentralCache().returnRange(Size::indexToSize(_Index), _Head);
 }
 
 } // namespace WW
