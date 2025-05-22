@@ -1,5 +1,6 @@
 #include "Raft.h"
 
+#include <RaftLogger.h>
 #include <RaftClient.h>
 
 namespace WW
@@ -13,9 +14,24 @@ Raft::Raft(NodeId _Id, const std::vector<RaftPeer> & _Peers)
     , _Rng(std::random_device{}())
     , _Election_dist(_Election_timeout_min, _Election_timeout_max)
     , _Election_timeout(0)
+    , _Heartbeat_timeout(50)
     , _Running(false)
+    , _Mutex()
+    , _Service()
     , _Server(_Peers[_Id].getIp(), _Peers[_Id].getPort())
 {
+    // 初始化日志，采用同步终端输出
+    Logger & logger = Logger::getSyncLogger("RaftLogger");
+    // 设置日志等级
+    logger.setLevel(LogLevel::Debug);
+    // 设置日志格式
+    logger.setFormatter("[%n][%F %T][%L] %v");
+
+    // 设置终端输出
+    auto sink = std::make_shared<ConsoleSink>();
+    logger.addSink(sink);
+
+    // 计算随机超时时间
     _Election_timeout = _Election_dist(_Rng);
 
     // 将自己注册到 service
@@ -45,7 +61,9 @@ void Raft::stop()
 void Raft::_ClientWorkingThread()
 {
     // 等待服务端全部启动
+    DEBUG("raft client delaying");
     std::this_thread::sleep_for(std::chrono::seconds(10));
+    DEBUG("raft client running");
 
     while (_Running.load()) {
         _Tick();
@@ -65,12 +83,14 @@ void Raft::_Tick()
         case RaftNode::NodeRole::Candidate:
             if (now - _Last_heartbeat_recv >= std::chrono::milliseconds(_Election_timeout)) {
                 // Leader 失联，发起选举
+                DEBUG("leader missing, start election");
                 _StartElection();
             }
             break;
         case RaftNode::NodeRole::Leader:
             if (now - _Last_heartbeat_send >= std::chrono::milliseconds(_Heartbeat_timeout)) {
                 // 到达时间，向其他节点发送心跳
+                DEBUG("send heartbeat");
                 _SendHeartbeat();
             }
             break;
@@ -82,6 +102,7 @@ void Raft::_Tick()
 void Raft::_StartElection()
 {
     // 切换身份为 Candidate
+    DEBUG("switch to Candidate");
     _Node.setRole(RaftNode::NodeRole::Candidate);
 
     // 将任期号增加1
@@ -103,15 +124,20 @@ void Raft::_StartElection()
     _Last_heartbeat_recv = std::chrono::steady_clock::now();
 
     // 发送给其他节点
+    DEBUG("start sending vote request");
     for (RaftPeer & peer : _Peers) {
         if (peer.getId() == _Node.getId()) {
             continue;
         }
 
         // 创建一个异步 RPC 客户端
-        RaftClient client(peer.getIp(), peer.getPort());
-        // 发送请求并传入回调函数
-        client.RequestVote(vote_request, std::bind(&Raft::_OnVoteResponse, this, std::placeholders::_1));
+        std::thread temp_thread([this, peer, vote_request]() {
+            RaftClient * client = new RaftClient(peer.getIp(), peer.getPort());
+            // 发送请求并传入回调函数
+            client->RequestVote(vote_request, std::bind(&Raft::_OnVoteResponse, this, std::placeholders::_1));
+        });
+        
+        temp_thread.detach();
     }
 }
 
@@ -138,9 +164,13 @@ void Raft::_SendHeartbeat()
         }
 
         // 创建一个异步 RPC 客户端
-        RaftClient client(peer.getIp(), peer.getPort());
-        // 发送请求并传入回调函数
-        client.AppendEntries(heartbeat_request, std::bind(&Raft::_OnAppendEntriesResponse, this, std::placeholders::_1));
+        std::thread temp_thread([this, peer, heartbeat_request]() {
+            RaftClient * client = new RaftClient(peer.getIp(), peer.getPort());
+            // 发送请求并传入回调函数
+            client->AppendEntries(heartbeat_request, std::bind(&Raft::_OnAppendEntriesResponse, this, std::placeholders::_1));
+        });
+
+        temp_thread.detach();
     }
 }
 
@@ -162,6 +192,7 @@ void Raft::_OnVoteResponse(const RequestVoteResponse & _Response)
         _Node.setTerm(other_term);
         _Node.setRole(RaftNode::NodeRole::Follower);
         _Node.setVotedFor(-1);
+        DEBUG("term out of date, switch to Follower");
         return;
     }
 
@@ -172,6 +203,7 @@ void Raft::_OnVoteResponse(const RequestVoteResponse & _Response)
         // 判断自己是否胜选
         if (_Node.getVoteCount() > (_Peers.size() / 2)) {
             // 赢得选举
+            DEBUG("win the election, switch to Leader");
             _Node.setRole(RaftNode::NodeRole::Leader);
             // 发送心跳宣布自己当选 Leader
             _SendHeartbeat();
@@ -205,6 +237,7 @@ void Raft::_OnAppendEntriesResponse(const AppendEntriesResponse & _Response)
 void Raft::_OnVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response)
 {
     // 获取请求信息
+    DEBUG("start handle vote request");
     TermId candidate_term = _Request.term();
     NodeId candidate_id = _Request.candidate_id();
     LogIndex candidate_last_log_index = _Request.last_log_index();
@@ -214,6 +247,7 @@ void Raft::_OnVoteRequest(const RequestVoteRequest & _Request, RequestVoteRespon
 
     if (candidate_term < _Node.getTerm()) {
         // 任期小于自己，拒绝投票
+        DEBUG("candidate term less than self, refuse to vote");
         _Response.set_term(_Node.getTerm());
         _Response.set_voted(false);
         return;
@@ -221,6 +255,7 @@ void Raft::_OnVoteRequest(const RequestVoteRequest & _Request, RequestVoteRespon
 
     if (candidate_term > _Node.getTerm()) {
         // 任期大于自己，自己成为 Follower
+        DEBUG("candidate term larger than self, switch to Follower");
         _Node.setRole(RaftNode::NodeRole::Follower);
         _Node.setTerm(candidate_term);
         _Node.setVotedFor(-1);
@@ -230,6 +265,7 @@ void Raft::_OnVoteRequest(const RequestVoteRequest & _Request, RequestVoteRespon
     NodeId voted = _Node.getVotedFor();
     if (voted != -1 && voted != candidate_id) {
         // 已经投票给了其他人，拒绝投票
+        DEBUG("already voted for other node, refuse to vote");
         _Response.set_term(_Node.getTerm());
         _Response.set_voted(false);
         return;
@@ -238,12 +274,14 @@ void Raft::_OnVoteRequest(const RequestVoteRequest & _Request, RequestVoteRespon
     // 判断日志是否比自己更新
     if (!_IsCandidateLogUpToDate(candidate_last_log_index, candidate_last_log_term)) {
         // 不如自己新，拒绝投票
+        DEBUG("candidate log older than self, refuse to vote");
         _Response.set_term(_Node.getTerm());
         _Response.set_voted(false);
         return;
     }
 
     // 投票成功
+    DEBUG("agree to vote");
     _Node.setVotedFor(candidate_id);
     _Response.set_term(_Node.getTerm());
     _Response.set_voted(true);

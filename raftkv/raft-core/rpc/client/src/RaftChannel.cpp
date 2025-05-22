@@ -4,6 +4,7 @@
 #include <muduo/net/TcpClient.h>
 #include <muduo/net/InetAddress.h>
 
+#include <RaftLogger.h>
 #include <RpcSerialization.h> 
 
 namespace WW
@@ -23,6 +24,7 @@ void RaftChannel::CallMethod(const google::protobuf::MethodDescriptor * method,
                              google::protobuf::Message * response,
                              google::protobuf::Closure * done)
 {
+    DEBUG("raft client method called");
     // 获取服务和方法名
     std::string service_name = method->service()->name();
     std::string method_name = method->name();
@@ -52,6 +54,7 @@ void RaftChannel::CallMethod(const google::protobuf::MethodDescriptor * method,
     _Context.done = done;
 
     // 连接
+    DEBUG("raft client connecting to server");
     client.connect();
     // 启动事件循环
     _Event_loop.loop();
@@ -60,6 +63,7 @@ void RaftChannel::CallMethod(const google::protobuf::MethodDescriptor * method,
 void RaftChannel::_OnConnection(const muduo::net::TcpConnectionPtr & conn)
 {
     if (conn->connected()) {
+        DEBUG("raft client connected to server");
         // 连接上服务端，准备发送序列化请求
         std::string service_name = _Context.method->service()->name();
         std::string method_name = _Context.method->name();
@@ -67,6 +71,7 @@ void RaftChannel::_OnConnection(const muduo::net::TcpConnectionPtr & conn)
         // 序列化请求
         std::string request_str;
         if (!RpcSerialization::serialize(service_name, method_name, *_Context.request, request_str)) {
+            WARN("fail to serialize request");
             // 序列化失败
             conn->shutdown();
             _Event_loop.quit();
@@ -74,15 +79,18 @@ void RaftChannel::_OnConnection(const muduo::net::TcpConnectionPtr & conn)
         }
 
         // 发送请求
+        DEBUG("raft client send request");
         conn->send(request_str);
     }
 }
 
 void RaftChannel::_OnMessage(const muduo::net::TcpConnectionPtr & conn, muduo::net::Buffer * buffer, muduo::Timestamp receive_time)
 {
+    DEBUG("raft client received response");
     std::string recv_buf = buffer->retrieveAllAsString();
     if (!_Context.response->ParseFromString(recv_buf)) {
         // 解析失败
+        WARN("fail to deserialize request");
         conn->shutdown();
         _Event_loop.quit();
         return;

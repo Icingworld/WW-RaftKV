@@ -1,6 +1,5 @@
 #include "RaftClient.h"
 
-#include <RaftChannel.h>
 #include <RaftClosure.h>
 
 namespace WW
@@ -8,13 +7,15 @@ namespace WW
 
 RaftClient::RaftClient(const std::string & _Ip, const std::string & _Port)
     : _Stub(nullptr)
+    , _Channel(nullptr)
 {
-    RaftChannel channel(_Ip, _Port);
-    _Stub = new RaftService_Stub(&channel);
+    _Channel = new RaftChannel(_Ip, _Port);
+    _Stub = new RaftService_Stub(_Channel);
 }
 
 RaftClient::~RaftClient()
 {
+    delete _Channel;
     delete _Stub;
 }
 

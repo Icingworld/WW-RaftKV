@@ -12,6 +12,7 @@ target_include_directories(raft-core PUBLIC
 
 target_link_libraries(raft-core PUBLIC
     third-party
+    WW::logger
     WW::rpc-core
 )
 

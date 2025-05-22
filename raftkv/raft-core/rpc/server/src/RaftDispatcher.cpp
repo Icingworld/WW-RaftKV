@@ -1,5 +1,6 @@
 #include "RaftDispatcher.h"
 
+#include <RaftLogger.h>
 #include <RpcSerialization.h>
 
 namespace WW
@@ -15,19 +16,25 @@ RaftDispatcher::RaftDispatcher(const std::string & _Ip, const std::string & _Por
 
 void RaftDispatcher::registerService(google::protobuf::Service * _Service)
 {
+    DEBUG("raft server register service");
     // 获取服务的元信息
     const google::protobuf::ServiceDescriptor * service_dsc = _Service->GetDescriptor();
     std::string service_name = service_dsc->name();
+    DEBUG("=== service name ===");
+    DEBUG(service_name);
     int method_count = service_dsc->method_count();
 
     // 创建服务信息实例
     ServiceInfo info;
 
+    DEBUG("=== method name ===");
     for (int i = 0; i < method_count; ++i) {
         // 依次读取方法信息，并存入表
         const google::protobuf::MethodDescriptor * method_dsc = service_dsc->method(i);
+        DEBUG(method_dsc->name());
         info._Method_map[method_dsc->name()] = method_dsc;
     }
+    DEBUG("=== end ===");
 
     // 保存信息
     info._Service = _Service;
@@ -44,6 +51,7 @@ void RaftDispatcher::run()
     server.setMessageCallback(std::bind(&RaftDispatcher::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     // 启动
+    DEBUG("raft server running");
     server.start();
     _Event_loop.loop();
 }
@@ -52,12 +60,14 @@ void RaftDispatcher::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (!_Conn->connected()) {
         // 连接关闭，断开连接
+        DEBUG("tcp connection closed");
         _Conn->shutdown();
     }
 }
 
 void RaftDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
+    DEBUG("raft server receive new message");
     // 反序列化提取信息
     std::string recv_buf = _Buffer->retrieveAllAsString();
     std::string service_name;
@@ -65,12 +75,14 @@ void RaftDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
     std::string arg_buf;
 
     if (!RpcSerialization::deserialize(recv_buf, service_name, method_name, arg_buf)) {
+        ERROR("fail to deserialize message");
         return;
     }
 
     // 从表中查找服务和方法
     auto service_it = _Service_map.find(service_name);
     if (service_it == _Service_map.end()) {
+        ERROR("fail to find this service");
         return;
     }
 
@@ -78,6 +90,7 @@ void RaftDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
 
     auto method_it = info._Method_map.find(method_name);
     if (method_it == info._Method_map.end()) {
+        ERROR("fail to find this method");
         return;
     }
 
@@ -87,6 +100,7 @@ void RaftDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
 
     // 反序列化请求
     if (!RpcSerialization::deserializeArgs(arg_buf, request.get())) {
+        ERROR("fail to deserialize args");
         return;
     }
 
@@ -108,6 +122,7 @@ void RaftDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _Conn, g
     std::string response_str;
     if (_Response->SerializeToString(&response_str)) {
         // 序列化成功，发送响应
+        DEBUG("raft server send response");
         _Conn->send(response_str);
     }
 

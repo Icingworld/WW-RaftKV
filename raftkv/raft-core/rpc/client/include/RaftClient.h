@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include <RaftChannel.h>
 #include <raft.pb.h>
 
 namespace WW
@@ -14,6 +15,7 @@ class RaftClient
 {
 private:
     RaftService_Stub * _Stub;       // 客户端
+    RaftChannel * _Channel;         // 通道
 
 public:
     RaftClient(const std::string & _Ip, const std::string & _Port);

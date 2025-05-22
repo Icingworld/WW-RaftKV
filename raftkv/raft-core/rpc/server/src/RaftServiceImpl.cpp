@@ -1,5 +1,6 @@
 #include "RaftServiceImpl.h"
 
+#include <RaftLogger.h>
 #include <Raft.h>
 
 namespace WW
@@ -15,6 +16,7 @@ void RaftServiceImpl::RequestVote(google::protobuf::RpcController * controller,
                                   RequestVoteResponse * response,
                                   google::protobuf::Closure * done)
 {
+    DEBUG("raft server RequestVote called");
     _Raft->_OnVoteRequest(*request, *response);
 
     if (done != nullptr) {
@@ -27,6 +29,7 @@ void RaftServiceImpl::AppendEntries(google::protobuf::RpcController * controller
                                     AppendEntriesResponse * response,
                                     google::protobuf::Closure * done)
 {
+    DEBUG("raft server AppendEntries called");
     _Raft->_OnAppendEntriesRequest(*request, *response);
 
     if (done != nullptr) {
@@ -36,7 +39,7 @@ void RaftServiceImpl::AppendEntries(google::protobuf::RpcController * controller
 
 void RaftServiceImpl::setRaft(Raft * _Raft)
 {
-    _Raft = _Raft;
+    this->_Raft = _Raft;
 }
 
 } // namespace WW
