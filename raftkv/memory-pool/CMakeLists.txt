@@ -1,4 +1,4 @@
-file(GLOB_RECURSE MEMORY_POOL_SOURCES ".cpp")
+file(GLOB_RECURSE MEMORY_POOL_SOURCES "*.cpp")
 
 add_library(memory-pool STATIC ${MEMORY_POOL_SOURCES})
 

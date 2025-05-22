@@ -20,7 +20,7 @@ CentralCache & CentralCache::getCentralCache()
 
 FreeObject * CentralCache::fetchRange(size_type _Size, size_type _Count)
 {
-    size_type _Index = Size::size_to_index(_Size);
+    size_type _Index = Size::sizeToIndex(_Size);
 
     // 锁住index对应链表
     _Spans[_Index].lock();
@@ -55,7 +55,7 @@ FreeObject * CentralCache::fetchRange(size_type _Size, size_type _Count)
 
 void CentralCache::returnRange(size_type size, FreeObject * _Free_object)
 {
-    size_type _Index = Size::size_to_index(size);
+    size_type _Index = Size::sizeToIndex(size);
 
     // 锁住index对应链表
     _Spans[_Index].lock();
@@ -102,7 +102,7 @@ void CentralCache::returnRange(size_type size, FreeObject * _Free_object)
 
 Span * CentralCache::_GetFreeSpan(size_type _Size)
 {
-    size_type _Index = Size::size_to_index(_Size);
+    size_type _Index = Size::sizeToIndex(_Size);
 
     for (auto _It = _Spans[_Index].begin(); _It != _Spans[_Index].end(); ++_It) {
         // 遍历链表，查看是否有已经切过的页

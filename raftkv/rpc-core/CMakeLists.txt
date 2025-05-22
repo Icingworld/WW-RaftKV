@@ -1,4 +1,4 @@
-file(GLOB_RECURSE RPC_CORE_SOURCES ".cc" ".cpp")
+file(GLOB_RECURSE RPC_CORE_SOURCES "*.cc" "*.cpp")
 
 add_library(rpc-core STATIC ${RPC_CORE_SOURCES})
 
@@ -13,16 +13,8 @@ target_include_directories(rpc-core PUBLIC
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
 
-# ZooKeeper
-include_directories(/usr/include)
-link_directories(/usr/lib)
-
 target_link_libraries(rpc-core PRIVATE
-    muduo_base
-    muduo_net
-    Threads::Threads
-    protobuf::libprotobuf
-    zookeeper_mt
+    third-party
 )
 
-add_library(WW::RPC-CORE ALIAS rpc-core)
+add_library(WW::rpc-core ALIAS rpc-core)

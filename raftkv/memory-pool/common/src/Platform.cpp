@@ -9,7 +9,7 @@
 namespace WW
 {
 
-void * Platform::aligned_malloc(size_type _Alignment, size_type _Size)
+void * Platform::alignedMalloc(size_type _Alignment, size_type _Size)
 {
     void * _Ptr = nullptr;
 
@@ -24,7 +24,7 @@ void * Platform::aligned_malloc(size_type _Alignment, size_type _Size)
     return _Ptr;
 }
 
-void Platform::aligned_free(void * _Ptr)
+void Platform::alignedFree(void * _Ptr)
 {
 #if defined(_WIN32) || defined(_WIN64)
     _aligned_free(_Ptr);
