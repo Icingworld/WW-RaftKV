@@ -5,22 +5,48 @@
 namespace WW
 {
 
+Raft::Raft(NodeId _Id, const std::vector<RaftPeer> & _Peers)
+    : _Node(_Id)
+    , _Peers(_Peers)
+    , _Election_timeout_min(150)
+    , _Election_timeout_max(300)
+    , _Rng(std::random_device{}())
+    , _Election_dist(_Election_timeout_min, _Election_timeout_max)
+    , _Election_timeout(0)
+    , _Running(false)
+    , _Server(_Peers[_Id].getIp(), _Peers[_Id].getPort())
+{
+    _Election_timeout = _Election_dist(_Rng);
+
+    // 将自己注册到 service
+    _Service.setRaft(this);
+
+    // 将服务注册到 server
+    _Server.registerService(&_Service);
+}
+
 void Raft::run()
 {
     _Running.store(true);
-    _Thread = std::thread(&Raft::_WorkingThread, this);
+    _Client_thread = std::thread(&Raft::_ClientWorkingThread, this);
+
+    _Server.run();
 }
 
 void Raft::stop()
 {
     _Running.store(false);
-    if (_Thread.joinable()) {
-        _Thread.join();
+
+    if (_Client_thread.joinable()) {
+        _Client_thread.join();
     }
 }
 
-void Raft::_WorkingThread()
+void Raft::_ClientWorkingThread()
 {
+    // 等待服务端全部启动
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
     while (_Running.load()) {
         _Tick();
 
@@ -155,11 +181,11 @@ void Raft::_OnVoteResponse(const RequestVoteResponse & _Response)
 
 void Raft::_OnAppendEntriesResponse(const AppendEntriesResponse & _Response)
 {
-    std::lock_guard<std::mutex> lock(_Mutex);
-
     // 获取响应信息
     TermId other_term = _Response.term();
     bool other_success = _Response.success();
+
+    std::lock_guard<std::mutex> lock(_Mutex);
 
     if (other_term > _Node.getTerm()) {
         // 任期号落后，出现了比自己更先进的 Leader，卸任为 Follower
@@ -173,6 +199,117 @@ void Raft::_OnAppendEntriesResponse(const AppendEntriesResponse & _Response)
         // TODO
     } else {
         // TODO
+    }
+}
+
+void Raft::_OnVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response)
+{
+    // 获取请求信息
+    TermId candidate_term = _Request.term();
+    NodeId candidate_id = _Request.candidate_id();
+    LogIndex candidate_last_log_index = _Request.last_log_index();
+    LogIndex candidate_last_log_term = _Request.last_log_term();
+
+    std::lock_guard<std::mutex> lock(_Mutex);
+
+    if (candidate_term < _Node.getTerm()) {
+        // 任期小于自己，拒绝投票
+        _Response.set_term(_Node.getTerm());
+        _Response.set_voted(false);
+        return;
+    }
+
+    if (candidate_term > _Node.getTerm()) {
+        // 任期大于自己，自己成为 Follower
+        _Node.setRole(RaftNode::NodeRole::Follower);
+        _Node.setTerm(candidate_term);
+        _Node.setVotedFor(-1);
+    }
+
+    // 检查是否投过票，当自己为 Candidate 且投过票时也会进入该情况
+    NodeId voted = _Node.getVotedFor();
+    if (voted != -1 && voted != candidate_id) {
+        // 已经投票给了其他人，拒绝投票
+        _Response.set_term(_Node.getTerm());
+        _Response.set_voted(false);
+        return;
+    }
+
+    // 判断日志是否比自己更新
+    if (!_IsCandidateLogUpToDate(candidate_last_log_index, candidate_last_log_term)) {
+        // 不如自己新，拒绝投票
+        _Response.set_term(_Node.getTerm());
+        _Response.set_voted(false);
+        return;
+    }
+
+    // 投票成功
+    _Node.setVotedFor(candidate_id);
+    _Response.set_term(_Node.getTerm());
+    _Response.set_voted(true);
+
+    // 重置心跳，避免触发选举
+    _Last_heartbeat_recv = std::chrono::steady_clock::now();
+}
+
+void Raft::_OnAppendEntriesRequest(const AppendEntriesRequest & _Request, AppendEntriesResponse & _Response)
+{
+    // 获取请求信息
+    TermId leader_term = _Request.term();
+    NodeId leader_id = _Request.leader_id();
+    LogIndex leader_prev_log_index = _Request.prev_log_index();
+    LogIndex leader_prev_log_term = _Request.prev_log_term();
+
+    std::lock_guard<std::mutex> lock(_Mutex);
+
+    if (leader_term < _Node.getTerm()) {
+        // 任期比自己小，拒绝心跳
+        _Response.set_term(_Node.getTerm());
+        _Response.set_success(false);
+        return;
+    }
+
+    if (leader_term > _Node.getTerm()) {
+        // 任期比自己高，有两种情况，一种是别人宣布胜选，另一种是自己经历了宕机、脑裂等事故
+        _Node.setTerm(leader_term);
+        _Node.setRole(RaftNode::NodeRole::Follower);
+        _Node.setVotedFor(-1);
+    }
+
+    // 心跳合法，更新时间
+    _Last_heartbeat_recv = std::chrono::steady_clock::now();
+
+    // 检查日志是否匹配，是否存在 leader_prev_log_index 处任期为 leader_prev_log_term 的日志
+    if (!_Node.match(leader_prev_log_index, leader_prev_log_term)) {
+        // 日志不匹配，拒绝心跳
+        _Response.set_term(_Node.getTerm());
+        _Response.set_success(false);
+        return;
+    }
+
+    // 开始检测 logentry
+    const auto & entries = _Request.entry();
+    if (entries.empty()) {
+        // 日志为空，是普通心跳报文
+        _Response.set_term(_Node.getTerm());
+        _Response.set_success(true);
+    }
+
+    // 是日志追加请求报文
+    // TODO
+}
+
+bool Raft::_IsCandidateLogUpToDate(LogIndex _Last_index, TermId _Last_term)
+{
+    LogIndex my_index = _Node.getLastLogIndex();
+    TermId my_term = _Node.getLastLogTerm();
+
+    if (_Last_term != my_term) {
+        // 任期不同，比较任期
+        return _Last_term > my_term;
+    } else {
+        // 任期相同，比较索引
+        return _Last_index >= my_index;
     }
 }
 

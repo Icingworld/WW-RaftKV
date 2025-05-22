@@ -40,6 +40,11 @@ public:
     const RaftLogEntry & at(LogIndex _Index) const;
 
     /**
+     * @brief 判断索引和任期是否匹配
+    */
+    bool match(LogIndex _Index, TermId _Term) const;
+
+    /**
      * @brief 插入新日志
     */
     void push(const RaftLogEntry & _Log_entry);

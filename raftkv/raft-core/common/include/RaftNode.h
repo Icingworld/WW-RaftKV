@@ -52,6 +52,11 @@ public:
     NodeRole getRole() const;
 
     /**
+     * @brief 获取投票节点 ID
+    */
+    NodeId getVotedFor() const;
+
+    /**
      * @brief 获取票数
     */
     int getVoteCount() const;
@@ -65,6 +70,11 @@ public:
      * @brief 获取最新日志任期
     */
     TermId getLastLogTerm() const;
+
+    /**
+     * @brief 判断日志索引和任期是否匹配
+    */
+    bool match(LogIndex _Index, TermId _Term) const;
 
     /**
      * @brief 设置任期号

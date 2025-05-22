@@ -28,6 +28,11 @@ RaftNode::NodeRole RaftNode::getRole() const
     return _Role;
 }
 
+NodeId RaftNode::getVotedFor() const
+{
+    return _Voted_for;
+}
+
 int RaftNode::getVoteCount() const
 {
     return _Vote_count;
@@ -41,6 +46,11 @@ LogIndex RaftNode::getLastLogIndex() const
 TermId RaftNode::getLastLogTerm() const
 {
     return _Logs.getLastTerm();
+}
+
+bool RaftNode::match(LogIndex _Index, TermId _Term) const
+{
+    return _Logs.match(_Index, _Term);
 }
 
 void RaftNode::setTerm(TermId _Term)

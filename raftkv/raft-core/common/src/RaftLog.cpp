@@ -31,6 +31,21 @@ const RaftLogEntry & RaftLog::at(LogIndex _Index) const
     return _Logs.at(_Index);
 }
 
+bool RaftLog::match(LogIndex _Index, TermId _Term) const
+{
+    if (_Index == -1) {
+        // 空日志
+        return true;
+    }
+
+    if (_Index > _Last_index) {
+        // 不在范围
+        return false;
+    }
+
+    return at(_Index).getTerm() == _Term;
+}
+
 void RaftLog::push(const RaftLogEntry & _Log_entry)
 {
     _Logs.emplace_back(_Log_entry);
