@@ -14,7 +14,7 @@ template <typename ResponseType>
 class RaftClosure : public google::protobuf::Closure
 {
 private:
-    ResponseType _Response;
+    ResponseType * _Response;
     std::function<void(const ResponseType &)> _Callback;
 
 public:
@@ -30,7 +30,7 @@ public:
     void Run() override
     {
         if (_Callback != nullptr) {
-            _Callback(_Response);
+            _Callback(*_Response);
         }
 
         delete this;
