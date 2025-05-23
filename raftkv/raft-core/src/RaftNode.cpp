@@ -1,0 +1,107 @@
+#include "RaftNode.h"
+
+namespace WW
+{
+
+RaftNode::RaftNode(NodeId _Id)
+    : _Id(_Id)
+    , _Term(0)
+    , _Role(NodeRole::Follower)
+    , _Logs()
+    , _Voted_for(-1)
+    , _Last_commit_index(-1)
+    , _Last_applied_index(-1)
+{
+}
+
+NodeId RaftNode::getId() const
+{
+    return _Id;
+}
+
+TermId RaftNode::getTerm() const
+{
+    return _Term;
+}
+
+RaftNode::NodeRole RaftNode::getRole() const
+{
+    return _Role;
+}
+
+NodeId RaftNode::getVotedFor() const
+{
+    return _Voted_for;
+}
+
+LogIndex RaftNode::getLastCommitIndex() const
+{
+    return _Last_commit_index;
+}
+
+LogIndex RaftNode::getLastAppliedIndex() const
+{
+    return _Last_applied_index;
+}
+
+bool RaftNode::isFollower() const
+{
+    return _Role == NodeRole::Follower;
+}
+
+bool RaftNode::isCandidate() const
+{
+    return _Role == NodeRole::Candidate;
+}
+
+bool RaftNode::isLeader() const
+{
+    return _Role == NodeRole::Leader;
+}
+
+bool RaftNode::match(LogIndex _Index, TermId _Term) const
+{
+    return _Logs.match(_Index, _Term);
+}
+
+void RaftNode::setTerm(TermId _Term)
+{
+    this->_Term = _Term;
+}
+
+void RaftNode::setRole(NodeRole _Role)
+{
+    this->_Role = _Role;
+}
+
+void RaftNode::switchToFollower()
+{
+    _Role = NodeRole::Follower;
+}
+
+void RaftNode::switchToCandidate()
+{
+    _Role = NodeRole::Candidate;
+}
+
+void RaftNode::switchToLeader()
+{
+    _Role = NodeRole::Leader;
+}
+
+void RaftNode::setVotedFor(NodeId _Id)
+{
+    _Voted_for = _Id;
+}
+
+void RaftNode::setLastCommitIndex(LogIndex _Last_commit_index)
+{
+    this->_Last_commit_index = _Last_commit_index;
+}
+
+void RaftNode::setLastAppliedIndex(LogIndex _Last_applied_index)
+{
+    this->_Last_applied_index = _Last_applied_index;
+}
+
+} // namespace WW
