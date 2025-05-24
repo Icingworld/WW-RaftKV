@@ -44,6 +44,21 @@ LogIndex RaftNode::getLastAppliedIndex() const
     return _Last_applied_index;
 }
 
+LogIndex RaftNode::getLastIndex() const
+{
+    return _Logs.getLastIndex();
+}
+
+TermId RaftNode::getLastTerm() const
+{
+    return _Logs.getLastTerm();
+}
+
+TermId RaftNode::getTerm(LogIndex _Index) const
+{
+    return _Logs.getTerm(_Index);
+}
+
 bool RaftNode::isFollower() const
 {
     return _Role == NodeRole::Follower;

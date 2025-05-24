@@ -70,6 +70,21 @@ public:
     LogIndex getLastAppliedIndex() const;
 
     /**
+     * @brief 获取最新日志索引
+    */
+    LogIndex getLastIndex() const;
+
+    /**
+     * @brief 获取最新日志任期
+    */
+    TermId getLastTerm() const;
+
+    /**
+     * @brief 获取指定索引的任期号
+    */
+    TermId getTerm(LogIndex _Index) const;
+
+    /**
      * @brief 是否为 Follower
     */
     bool isFollower() const;

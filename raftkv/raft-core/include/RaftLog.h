@@ -32,6 +32,8 @@ public:
     */
     TermId getLastTerm() const;
 
+    TermId getTerm(LogIndex _Index) const;
+
     /**
      * @brief 获取指定索引的日志
      * @param _Index 索引

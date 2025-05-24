@@ -25,6 +25,15 @@ TermId RaftLog::getLastTerm() const
     return _Logs.back().getTerm();
 }
 
+TermId RaftLog::getTerm(LogIndex _Index) const
+{
+    if (_Index < _Base_index || _Index > getLastIndex()) {
+        return 0;
+    }
+
+    return _Logs.at(_Index - _Base_index).getTerm();
+}
+
 const RaftLogEntry & RaftLog::at(LogIndex _Index) const
 {
     if (_Index < _Base_index || _Index > getLastIndex()) {
