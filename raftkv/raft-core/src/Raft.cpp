@@ -3,8 +3,6 @@
 #include <random>
 #include <algorithm>
 
-#include <RaftClient.h>
-
 namespace WW
 {
 
@@ -20,7 +18,7 @@ Raft::Raft(NodeId _Id, const std::vector<RaftPeer> _Peers)
     , _Vote_count(0)
     , _Out_messages()
 {
-
+    _Election_timeout = _GetRandomTimeout(_Election_timeout_min, _Election_timeout_max);
 }
 
 void Raft::tick(int _Delta_time)
@@ -141,6 +139,9 @@ void Raft::_SendHeartbeat()
 void Raft::_ResetElectionTimeout()
 {
     _Election_interval = 0;
+
+    // 重新生成超时时间
+    _Election_timeout = _GetRandomTimeout(_Election_timeout_min, _Election_timeout_max);
 }
 
 void Raft::_ResetHeartbeatTimeout()

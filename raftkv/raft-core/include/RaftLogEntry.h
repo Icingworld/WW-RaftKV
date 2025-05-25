@@ -17,6 +17,8 @@ private:
     std::string _Command;   // 日志命令
 
 public:
+    RaftLogEntry() = default;
+
     RaftLogEntry(TermId _Term, const std::string & _Command);
 
 public:
