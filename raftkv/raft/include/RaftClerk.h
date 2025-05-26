@@ -1,0 +1,108 @@
+#pragma once
+
+#include <thread>
+#include <mutex>
+#include <atomic>
+
+#include <Raft.h>
+#include <RaftPeerNet.h>
+#include <RaftRpcServiceImpl.h>
+#include <RaftRpcServer.h>
+#include <Raft.pb.h>
+
+namespace WW
+{
+
+/**
+ * @brief Raft 应用层
+*/
+class RaftClerk
+{
+private:
+    friend class RaftRpcServiceImpl;
+
+private:
+    Raft * _Raft;                       // Raft 协议
+    std::vector<RaftPeerNet> _Peers;    // 存储网络信息
+
+    // 定时器线程
+    std::atomic<bool> _Running;         // 运行状态
+    int _Timeout;                       // 定时器
+    std::thread _Client_thread;         // 客户端线程
+
+    // 多线程
+    std::mutex _Mutex;                  // 保护 Raft 状态
+
+    // 服务端
+    RaftRpcServiceImpl _Service;        // 服务实例
+    RaftRpcServer * _Server;            // 服务端
+
+public:
+    RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers);
+
+    ~RaftClerk();
+
+public:
+    /**
+     * @brief 启动 Raft
+    */
+    void run();
+
+    /**
+     * @brief 关闭 Raft
+    */
+    void stop();
+
+private:
+    /**
+     * @brief 客户端定时器线程
+    */
+    void _ClientWorking();
+
+    /**
+     * @brief 处理 Raft 中输出的消息
+    */
+    void _HandleRaftMessageOut(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理发送心跳请求的消息
+    */
+    void _SendHeartbeatRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理发送投票请求的消息
+    */
+    void _SendRequestVoteRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理发送日志同步请求的消息
+    */
+    void _SendAppendEntriesRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理 Rpc 收到的心跳响应
+    */
+    void _HandleHeartbeatResponse(NodeId _Id, const AppendEntriesResponse & _Response);
+
+    /**
+     * @brief 处理 Rpc 收到的投票请求
+    */
+    void _HandleRequestVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response);
+
+    /**
+     * @brief 处理 Rpc 收到的投票响应
+    */
+    void _HandleRequestVoteResponse(const RequestVoteResponse & _Response);
+
+    /**
+     * @brief 处理 Rpc 收到的心跳/日志同步请求
+    */
+    void _HandleAppendEntriesRequest(const AppendEntriesRequest & _Request, AppendEntriesResponse & _Response);
+
+    /**
+     * @brief 处理 Rpc 收到的日志同步响应
+    */
+    void _HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse & _Response);
+};
+
+} // namespace WW
