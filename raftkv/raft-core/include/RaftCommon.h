@@ -10,12 +10,12 @@ namespace WW
  * @brief 日志索引
  * @details 可改为由容器管理
 */
-using LogIndex = std::size_t;
+using LogIndex = int;
 
 /**
  * @brief 节点 ID
 */
-using NodeId = std::size_t;
+using NodeId = int;
 
 /**
  * @brief 任期号

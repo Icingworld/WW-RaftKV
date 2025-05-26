@@ -3,6 +3,7 @@ add_subdirectory(memory-pool)
 add_subdirectory(kvstore)
 add_subdirectory(rpc-core)
 add_subdirectory(raft-core)
+add_subdirectory(raft)
 
 add_library(raftkv INTERFACE)
 
@@ -15,7 +16,7 @@ target_include_directories(raftkv INTERFACE
 )
 
 target_link_libraries(raftkv INTERFACE
-    WW::raft-core
+    WW::raft
 )
 
 add_library(WW::raftkv ALIAS raftkv)

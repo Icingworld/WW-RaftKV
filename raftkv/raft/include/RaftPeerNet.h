@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <Common.h>
+#include <RaftCommon.h>
 
 namespace WW
 {

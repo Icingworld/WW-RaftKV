@@ -29,7 +29,8 @@ private:
     int _Vote_count;                            // 选举票数
 
     // 消息通道
-    std::vector<RaftMessage> _Out_messages;     // 输出消息
+    std::vector<RaftMessage> _Inner_messages;   // Raft 内部驱动产生的输出消息
+    RaftMessage _Outter_messages;               // Raft 外部事件驱动产生的输出消息
 
 public:
     Raft(NodeId _Id, const std::vector<RaftPeer> _Peers);
@@ -50,14 +51,19 @@ public:
     void step(const RaftMessage & _Message);
 
     /**
-     * @brief 读取 Raft 消息输出
+     * @brief 读取 Raft 内部消息输出
     */
-    const std::vector<RaftMessage> & readReady() const;
+    const std::vector<RaftMessage> & readInnerMessage() const;
 
     /**
-     * @brief 清空 Raft 消息输出
+     * @brief 读取 Raft 外部消息输出
     */
-    void clearReady();
+    const RaftMessage & readOutterMessage() const;
+
+    /**
+     * @brief 清空 Raft 内部消息输出
+    */
+    void clearInnerMessage();
 
 private:
     /**

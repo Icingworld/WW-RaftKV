@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include <Common.h>
+#include <RaftCommon.h>
 #include <RaftRpcChannel.h>
 #include <Raft.pb.h>
 

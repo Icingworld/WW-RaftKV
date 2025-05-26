@@ -2,6 +2,7 @@
 
 #include <RaftRpcSerialization.h>
 #include <RaftRpcClosure.h>
+#include <RaftLogger.h>
 
 namespace WW
 {
@@ -16,6 +17,7 @@ RaftRpcDispatcher::RaftRpcDispatcher(const std::string & _Ip, const std::string 
 
 void RaftRpcDispatcher::registerService(google::protobuf::Service * _Service)
 {
+    DEBUG("register service");
     // 获取服务的元信息
     const google::protobuf::ServiceDescriptor * service_dsc = _Service->GetDescriptor();
     std::string service_name = service_dsc->name();
@@ -24,11 +26,15 @@ void RaftRpcDispatcher::registerService(google::protobuf::Service * _Service)
     // 创建服务信息实例
     ServiceInfo info;
 
+    DEBUG("== register begin ==");
+    DEBUG("service name: %s", service_name.c_str());
     for (int i = 0; i < method_count; ++i) {
         // 依次读取方法信息，并存入表
         const google::protobuf::MethodDescriptor * method_dsc = service_dsc->method(i);
         info._Method_map[method_dsc->name()] = method_dsc;
+        DEBUG("- method name: %s", method_dsc->name().c_str());
     }
+    DEBUG("== register end ==");
 
     // 保存信息
     info._Service = _Service;

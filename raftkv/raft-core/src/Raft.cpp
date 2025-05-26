@@ -3,20 +3,23 @@
 #include <random>
 #include <algorithm>
 
+#include <RaftLogger.h>
+
 namespace WW
 {
 
 Raft::Raft(NodeId _Id, const std::vector<RaftPeer> _Peers)
     : _Node(_Id)
     , _Peers(_Peers)
-    , _Election_timeout_min(150)
-    , _Election_timeout_max(300)
+    , _Election_timeout_min(300)
+    , _Election_timeout_max(600)
     , _Election_timeout(0)
     , _Heartbeat_timeout(50)
     , _Election_interval(0)
     , _Heartbeat_interval(0)
     , _Vote_count(0)
-    , _Out_messages()
+    , _Inner_messages()
+    , _Outter_messages()
 {
     _Election_timeout = _GetRandomTimeout(_Election_timeout_min, _Election_timeout_max);
 }
@@ -61,20 +64,26 @@ void Raft::step(const RaftMessage & _Message)
     }
 }
 
-const std::vector<RaftMessage> & Raft::readReady() const
+const std::vector<RaftMessage> & Raft::readInnerMessage() const
 {
-    return _Out_messages;
+    return _Inner_messages;
 }
 
-void Raft::clearReady()
+const RaftMessage & Raft::readOutterMessage() const
 {
-    _Out_messages.clear();
+    return _Outter_messages;
+}
+
+void Raft::clearInnerMessage()
+{
+    _Inner_messages.clear();
 }
 
 void Raft::_TickElection()
 {
     if (_Election_interval >= _Election_timeout) {
         // 超时，Leader 失联，发起选举
+        DEBUG("leader missing, start election");
         _ResetElectionTimeout();
         _StartElection();
     }
@@ -84,6 +93,7 @@ void Raft::_TickHeartbeat()
 {
     if (_Heartbeat_interval >= _Heartbeat_timeout) {
         // 超时，发送心跳
+        DEBUG("send heartbeat");
         _ResetHeartbeatTimeout();
         _SendHeartbeat();
     }
@@ -94,33 +104,46 @@ void Raft::_StartElection()
     // 1. 更新自己的状态
     _Node.switchToCandidate();
     _Node.setVotedFor(_Node.getId());
-    _Node.setTerm(_Node.getTerm() + 1);
+    TermId new_term = _Node.getTerm() + 1;
+    _Node.setTerm(new_term);
     _Vote_count = 1;
 
     // 2. 构造投票请求消息
     for (RaftPeer & peer : _Peers) {
+        if (peer.getId() == _Node.getId()) {
+            continue;
+        }
+
         RaftMessage vote_request;
 
         vote_request.type = RaftMessage::MessageType::RequestVoteRequest;
         vote_request.from = _Node.getId();
         vote_request.to = peer.getId();
-        vote_request.term = _Node.getTerm();
+        vote_request.term = new_term;   // 防止多线程修改
         vote_request.index = _Node.getLastIndex();
         vote_request.log_term = _Node.getLastTerm();
 
-        _Out_messages.emplace_back(vote_request);
+        _Inner_messages.emplace_back(vote_request);
     }
 }
 
 void Raft::_SendHeartbeat()
 {
-    // 1. 构造心跳消息
+    TermId cur_term = _Node.getTerm();
+
+    // 发送心跳消息
     for (RaftPeer & peer : _Peers) {
+        if (peer.getId() == _Node.getId()) {
+            continue;
+        }
+
+        // 构造心跳消息
         RaftMessage heartbeat_request;
 
         heartbeat_request.type = RaftMessage::MessageType::HeartbeatRequest;
         heartbeat_request.from = _Node.getId();
         heartbeat_request.to = peer.getId();
+        heartbeat_request.term = cur_term;
         heartbeat_request.commit = _Node.getLastCommitIndex();
         heartbeat_request.entries.clear();
 
@@ -132,7 +155,7 @@ void Raft::_SendHeartbeat()
         heartbeat_request.index = prev_index;
         heartbeat_request.log_term = prev_term;
 
-        _Out_messages.emplace_back(heartbeat_request);
+        _Inner_messages.emplace_back(heartbeat_request);
     }
 }
 
@@ -153,22 +176,31 @@ void Raft::_HandleHeartbeatRequest(const RaftMessage & _Message)
 {
     // 构造并设置响应消息
     RaftMessage response;
-    response.type = RaftMessage::MessageType::RequestVoteResponse;
-    response.from = _Message.to;
-    response.to = _Node.getId();
+    response.type = RaftMessage::MessageType::HeartbeatResponse;
+    response.from = _Node.getId();
+    response.to = _Message.from;
     response.term = _Node.getTerm();
     response.reject = true;
+
+    if (_Node.isLeader()) {
+        // TEST
+        _Outter_messages = response;
+        return;
+    }
 
     // 1. 比较两节点的任期
     if (_Message.term < response.term) {
         // 任期不如自己，直接拒绝
-        _Out_messages.emplace_back(response);
+        DEBUG("term: %zu less than self: %zu, refuse heartbeat", _Message.term, response.term);
+        _Outter_messages = response;
         return;
     }
 
     if (_Message.term > response.term) {
         // 任期高于自己，修改状态
+        DEBUG("term: %zu larger than self: %zu, switch to Follower", _Message.term, response.term);
         _Node.switchToFollower();
+        _ResetElectionTimeout();
         _Node.setTerm(_Message.term);
         _Node.setVotedFor(-1);
         response.term = _Message.term;
@@ -180,8 +212,9 @@ void Raft::_HandleHeartbeatRequest(const RaftMessage & _Message)
     // 3. 检查日志是否匹配
     if (!_Node.match(_Message.index, _Message.log_term)) {
         // 日志不匹配
+        DEBUG("log don't match, refuse heartbeat");
         response.index = _Node.getLastIndex();
-        _Out_messages.emplace_back(response);
+        _Outter_messages = response;
         return;
     }
 
@@ -192,10 +225,11 @@ void Raft::_HandleHeartbeatRequest(const RaftMessage & _Message)
     }
 
     // 5. 响应成功
+    DEBUG("heartbeat success");
     response.reject = false;
     response.index = _Node.getLastIndex();
 
-    _Out_messages.emplace_back(response);
+    _Outter_messages = response;
 }
 
 void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
@@ -203,21 +237,26 @@ void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
     // 构造并设置响应消息
     RaftMessage response;
     response.type = RaftMessage::MessageType::RequestVoteResponse;
-    response.from = _Message.to;
-    response.to = _Node.getId();
+    response.from = _Node.getId();
+    response.to = _Message.from;
     response.term = _Node.getTerm();
     response.reject = true;
+
+    DEBUG("receive vote request from node: %d", response.to);
 
     // 1. 比较两节点的任期
     if (_Message.term < response.term) {
         // 任期不如自己，直接拒绝
-        _Out_messages.emplace_back(response);
+        DEBUG("term: %zu less than self: %zu, refuse to vote", _Message.term, response.term);
+        _Outter_messages = response;
         return;
     }
 
     if (_Message.term > response.term) {
         // 任期大于自己，自己转换为 Follower
+        DEBUG("term: %zu larger than self: %zu, switch to Follower", _Message.term, response.term);
         _Node.switchToFollower();
+        _ResetElectionTimeout();
         _Node.setTerm(_Message.term);
         _Node.setVotedFor(-1);
         // 更新响应
@@ -227,22 +266,25 @@ void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
     // 2. 检查自己是否已经投过票
     if (_Node.getVotedFor() != -1 && _Node.getVotedFor() != response.to) {
         // 已经投过票且不是该节点，拒绝投票
-        _Out_messages.emplace_back(response);
+        DEBUG("already voted for node: %d, refuse to vote", _Node.getVotedFor());
+        _Outter_messages = response;
         return;
     }
 
     // 3. 检查日志是否匹配
     if (!_LogUpToDate(_Message.index, _Message.log_term)) {
         // 日志不匹配，拒绝投票
-        _Out_messages.emplace_back(response);
+        DEBUG("log don't match, refuse to vote");
+        _Outter_messages = response;
         return;
     }
 
     // 4. 条件通过，投票
+    DEBUG("approve, vote for it");
     _Node.setVotedFor(response.to);
     response.reject = false;
 
-    _Out_messages.emplace_back(response);
+    _Outter_messages = response;
 }
 
 void Raft::_HandleHeartbeatResponse(const RaftMessage & _Message)
@@ -262,6 +304,7 @@ void Raft::_HandleHeartbeatResponse(const RaftMessage & _Message)
     if (other_term > _Node.getTerm()) {
         // 对方任期更高，退位为 Follower
         _Node.switchToFollower();
+        _ResetElectionTimeout();
         _Node.setTerm(other_term);
         _Node.setVotedFor(-1);
         return;
@@ -328,7 +371,9 @@ void Raft::_HandleRequestVoteResponse(const RaftMessage & _Message)
     // 1. 检查任期
     if (other_term > _Node.getTerm()) {
         // 任期大于自己，退出选举
+        DEBUG("withdraw the election");
         _Node.switchToFollower();
+        _ResetElectionTimeout();
         _Node.setTerm(other_term);
         _Node.setVotedFor(-1);
         return;
@@ -342,10 +387,15 @@ void Raft::_HandleRequestVoteResponse(const RaftMessage & _Message)
         // 判断是否已经胜选
         if (_Vote_count > (_Peers.size() / 2)) {
             // 超过半数，胜选
+            DEBUG("win the election, switch to leader");
             _Node.switchToLeader();
 
             // Leader 需要初始化 peer 的两个索引
             for (RaftPeer & peer : _Peers) {
+                if (peer.getId() == _Node.getId()) {
+                    continue;
+                }
+
                 peer.setMatchIndex(0);
                 peer.setNextIndex(_Node.getLastIndex() + 1);
             }
@@ -368,9 +418,10 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
 
 int Raft::_GetRandomTimeout(int _Timeout_min, int _Timeout_max) const
 {
-    // 创建随机数引擎
+    // 创建全局随机数引擎
     static std::mt19937 rng(std::random_device{}());
-    static std::uniform_int_distribution<int> dist(_Timeout_min, _Timeout_max);
+    // 分布需要每次都创建
+    std::uniform_int_distribution<int> dist(_Timeout_min, _Timeout_max);
 
     return dist(rng);
 }

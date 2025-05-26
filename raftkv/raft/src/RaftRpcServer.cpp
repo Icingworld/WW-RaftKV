@@ -7,6 +7,10 @@ RaftRpcServer::RaftRpcServer(const std::string & _Ip, const std::string & _Port,
     : _Dispatcher(nullptr)
 {
     _Dispatcher = new RaftRpcDispatcher(_Ip, _Port);
+
+    if (_Service != nullptr) {
+        registerService(_Service);
+    }
 }
 
 RaftRpcServer::~RaftRpcServer()

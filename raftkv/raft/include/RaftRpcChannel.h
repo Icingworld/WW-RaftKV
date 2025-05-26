@@ -6,6 +6,7 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
 #include <muduo/net/EventLoop.h>
+#include <muduo/net/TcpClient.h>
 
 namespace WW
 {
@@ -27,6 +28,7 @@ private:
         const google::protobuf::Message * _Request;
         google::protobuf::Message * _Response;
         google::protobuf::Closure * _Done;
+        muduo::net::TcpClient * _Client;        // 用于管理生命周期
     };
 
 private:
