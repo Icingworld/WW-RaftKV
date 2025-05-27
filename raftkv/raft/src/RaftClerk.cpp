@@ -21,9 +21,13 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     }
     _Raft = new Raft(_Id, peers);
 
-    // 初始化服务端
+    // 初始化 Raft 服务端
     _Service.setRaftClerk(this);
     _Server = new RaftRpcServer(_Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Service);
+
+    // 初始化 Raft 操作服务端
+    _Op_service.setRaftClerk(this);
+    _Op_server = new RaftOperationServer(_Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Service);
 
     // 设置 muduo 日志等级
     muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
@@ -147,7 +151,9 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 
     // 将日志添加到数组
     for (const RaftLogEntry & entry : _Message.entries) {
-        // TODO
+        WW::LogEntry * proto_entry = append_entries_request.add_entry();
+        proto_entry->set_term(entry.getTerm());
+        proto_entry->set_command(entry.getCommand());
     }
 
     // 创建一个线程来发送

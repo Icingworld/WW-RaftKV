@@ -35,4 +35,24 @@ void RaftRpcServiceImpl::setRaftClerk(RaftClerk * _Raft_clerk)
     this->_Raft_clerk = _Raft_clerk;
 }
 
+RaftOperationServiceImpl::RaftOperationServiceImpl(RaftClerk * _Raft_clerk)
+    : _Raft_clerk(_Raft_clerk)
+{
+}
+
+void RaftOperationServiceImpl::OperateRaft(google::protobuf::RpcController * _Controller,
+                                           const RaftOperationRequest * _Request,
+                                           RaftOperationResponse * _Response,
+                                           google::protobuf::Closure * _Done)
+{
+    _Raft_clerk->_HandleOperateRaftRequest(*_Request, *_Response);
+
+    _Done->Run();
+}
+
+void RaftOperationServiceImpl::setRaftClerk(RaftClerk * _Raft_clerk)
+{
+    this->_Raft_clerk = _Raft_clerk;
+}
+
 } // namespace WW

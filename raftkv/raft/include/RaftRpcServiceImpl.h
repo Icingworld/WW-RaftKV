@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Raft.pb.h>
+#include <RaftOperation.pb.h>
 
 namespace WW
 {
@@ -29,6 +30,26 @@ public:
                        const AppendEntriesRequest * _Request,
                        AppendEntriesResponse * _Response,
                        google::protobuf::Closure * _Done) override;
+
+    void setRaftClerk(RaftClerk * _Raft_clerk);
+};
+
+/**
+ * @brief kvstore 操作服务
+*/
+class RaftOperationServiceImpl : public RaftOperationService
+{
+private:
+    RaftClerk * _Raft_clerk;
+
+public:
+    explicit RaftOperationServiceImpl(RaftClerk * _Raft_clerk = nullptr);
+
+public:
+    void OperateRaft(google::protobuf::RpcController * _Controller,
+                     const RaftOperationRequest * _Request,
+                     RaftOperationResponse * _Response,
+                     google::protobuf::Closure * _Done) override;
 
     void setRaftClerk(RaftClerk * _Raft_clerk);
 };

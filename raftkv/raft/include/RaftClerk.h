@@ -21,6 +21,7 @@ class RaftClerk
 {
 private:
     friend class RaftRpcServiceImpl;
+    friend class RaftOperationServiceImpl;
 
 private:
     Raft * _Raft;                       // Raft 协议
@@ -39,6 +40,8 @@ private:
     // 服务端
     RaftRpcServiceImpl _Service;        // 服务实例
     RaftRpcServer * _Server;            // 服务端
+    RaftOperationServiceImpl _Op_service;
+    RaftOperationServer * _Op_server;
 
 public:
     RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers);
@@ -106,6 +109,11 @@ private:
      * @brief 解析并执行命令
     */
     void _ParseAndExecCommand(const std::string & _Command);
+
+    /**
+     * @brief 处理 Rpc 收到的操作命令
+    */
+    void _HandleOperateRaftRequest(const RaftOperationRequest & _Request, RaftOperationResponse & _Response);
 };
 
 } // namespace WW
