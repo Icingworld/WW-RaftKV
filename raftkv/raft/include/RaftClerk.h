@@ -65,11 +65,6 @@ private:
     void _HandleRaftMessageOut(const RaftMessage & _Message);
 
     /**
-     * @brief 处理发送心跳请求的消息
-    */
-    void _SendHeartbeatRequest(const RaftMessage & _Message);
-
-    /**
      * @brief 处理发送投票请求的消息
     */
     void _SendRequestVoteRequest(const RaftMessage & _Message);
@@ -78,11 +73,6 @@ private:
      * @brief 处理发送日志同步请求的消息
     */
     void _SendAppendEntriesRequest(const RaftMessage & _Message);
-
-    /**
-     * @brief 处理 Rpc 收到的心跳响应
-    */
-    void _HandleHeartbeatResponse(NodeId _Id, const AppendEntriesResponse & _Response);
 
     /**
      * @brief 处理 Rpc 收到的投票请求

@@ -11,12 +11,12 @@ fi
 # 创建日志目录
 mkdir -p logs
 
-# 启动 9 个节点（node_id 从 0 到 8）
-for id in $(seq 0 8); do
+# 启动 8 个节点（node_id 从 1 到 8）
+for id in $(seq 1 8); do
     port=$((4396 + id))
     echo "Starting Raft node $id on port $port..."
     $EXECUTABLE $id > logs/node_$id.log 2>&1 &
     echo "Raft node $id started with PID $!"
 done
 
-echo "All 9 Raft nodes started."
+echo "All 8 Raft nodes started."

@@ -85,9 +85,6 @@ void RaftClerk::_ClientWorking()
 void RaftClerk::_HandleRaftMessageOut(const RaftMessage & _Message)
 {
     switch (_Message.type) {
-        case RaftMessage::MessageType::HeartbeatRequest:
-            _SendHeartbeatRequest(_Message);
-            break;
         case RaftMessage::MessageType::RequestVoteRequest:
             _SendRequestVoteRequest(_Message);
             break;
@@ -97,32 +94,6 @@ void RaftClerk::_HandleRaftMessageOut(const RaftMessage & _Message)
         default:
             break;
     }
-}
-
-void RaftClerk::_SendHeartbeatRequest(const RaftMessage & _Message)
-{
-    // 构造 Request 消息体
-    AppendEntriesRequest heartbeat_request;
-    heartbeat_request.set_term(_Message.term);
-    heartbeat_request.set_leader_id(_Message.from);
-    heartbeat_request.set_prev_log_index(_Message.index);
-    heartbeat_request.set_prev_log_term(_Message.log_term);
-    heartbeat_request.set_leader_commit(_Message.commit);
-
-    // 创建一个线程来发送
-    std::thread temp_thread([this, _Message, heartbeat_request]() {
-        // 获取当前节点的信息
-        const RaftPeerNet & peer = _Peers[_Message.from];
-
-        // 创建一个 RpcClient
-        RaftRpcClient client(peer.getIp(), peer.getPort());
-
-        // 发送 Rpc 报文
-        client.AppendEntries(heartbeat_request, peer.getId(), std::bind(&RaftClerk::_HandleHeartbeatResponse, this, std::placeholders::_1, std::placeholders::_2));
-    });
-
-    // 分离线程
-    temp_thread.detach();
 }
 
 void RaftClerk::_SendRequestVoteRequest(const RaftMessage & _Message)
@@ -153,28 +124,41 @@ void RaftClerk::_SendRequestVoteRequest(const RaftMessage & _Message)
 
 void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 {
-    
-}
+    // 获取上下文中的信息
+    TermId this_term = _Message.term;
+    NodeId this_id = _Message.from;
+    NodeId other_id = _Message.to;
+    LogIndex other_prev_log_index = _Message.index;
+    TermId other_prev_log_term = _Message.log_term;
+    LogIndex this_commit = _Message.commit;
 
-void RaftClerk::_HandleHeartbeatResponse(NodeId _Id, const AppendEntriesResponse & _Response)
-{
-    // 取出响应中的信息
-    TermId other_term = _Response.term();
-    NodeId other_id = _Id;
-    bool other_success = _Response.success();
-    LogIndex other_index = _Response.index();
+    // 构造 Request 消息体
+    AppendEntriesRequest append_entries_request;
+    append_entries_request.set_term(this_term);
+    append_entries_request.set_leader_id(this_id);
+    append_entries_request.set_prev_log_index(other_prev_log_index);
+    append_entries_request.set_prev_log_term(other_prev_log_term);
+    append_entries_request.set_leader_commit(this_commit);
 
-    // 构造消息
-    RaftMessage message;
-    message.type = RaftMessage::MessageType::HeartbeatResponse;
-    message.term = other_term;
-    message.from = other_id;
-    message.index = other_index;
-    message.reject = !other_success;
+    // 将日志添加到数组
+    for (const RaftLogEntry & entry : _Message.entries) {
+        // TODO
+    }
 
-    // 传递给 Raft 状态机
-    std::lock_guard<std::mutex> lock(_Mutex);
-    _Raft->step(message);
+    // 创建一个线程来发送
+    std::thread temp_thread([this, other_id, append_entries_request]() {
+        // 获取当前节点的信息
+        const RaftPeerNet & peer = _Peers[other_id];
+
+        // 创建一个 RpcClient
+        RaftRpcClient client(peer.getIp(), peer.getPort());
+
+        // 发送 Rpc 报文
+        client.AppendEntries(append_entries_request, other_id, std::bind(&RaftClerk::_HandleAppendEntriesResponse, this, std::placeholders::_1, std::placeholders::_2));
+    });
+
+    // 分离线程
+    temp_thread.detach();
 }
 
 void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response)
@@ -240,13 +224,10 @@ void RaftClerk::_HandleAppendEntriesRequest(const AppendEntriesRequest & _Reques
 
     // 构造消息
     RaftMessage message;
+    message.type = RaftMessage::MessageType::AppendEntriesRequest;
 
     // 判断条目是否为空
-    if (other_entries.empty()) {
-        // 是心跳包
-        message.type = RaftMessage::MessageType::HeartbeatRequest;
-    } else {
-        message.type = RaftMessage::MessageType::AppendEntriesRequest;
+    if (!other_entries.empty()) {
         for (const auto & entry : other_entries) {
             message.entries.emplace_back(entry.term(), entry.command());
         }
@@ -279,7 +260,23 @@ void RaftClerk::_HandleAppendEntriesRequest(const AppendEntriesRequest & _Reques
 
 void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse & _Response)
 {
-    
+    // 取出响应中的信息
+    TermId other_term = _Response.term();
+    NodeId other_id = _Id;
+    bool other_success = _Response.success();
+    LogIndex other_index = _Response.index();
+
+    // 构造消息
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::AppendEntriesResponse;
+    message.term = other_term;
+    message.from = other_id;
+    message.index = other_index;
+    message.reject = !other_success;
+
+    // 传递给 Raft 状态机
+    std::lock_guard<std::mutex> lock(_Mutex);
+    _Raft->step(message);
 }
 
 } // namespace WW

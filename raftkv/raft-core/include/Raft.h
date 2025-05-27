@@ -82,9 +82,9 @@ private:
     void _StartElection();
 
     /**
-     * @brief 发送心跳
-    */
-    void _SendHeartbeat();
+     * @brief 发送日志同步请求
+     */
+    void _SendAppendEntries(bool _IsHeartbeat);
 
     /**
      * @brief 重置选举定时器
@@ -95,16 +95,6 @@ private:
      * @brief 重置心跳定时器
     */
     void _ResetHeartbeatTimeout();
-
-    /**
-     * @brief 处理接收到的心跳
-    */
-    void _HandleHeartbeatRequest(const RaftMessage & _Message);
-
-    /**
-     * @brief 处理接收到的心跳响应
-    */
-    void _HandleHeartbeatResponse(const RaftMessage & _Message);
 
     /**
      * @brief 处理接收到的投票请求
