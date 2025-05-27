@@ -15,8 +15,6 @@ class RaftMessage
 public:
     enum class MessageType
     {
-        HeartbeatRequest,                   // Leader 发送心跳
-        HeartbeatResponse,                  // 收到 Follower 返回的心跳响应
         AppendEntriesRequest,               // Leader 向其他节点同步日志请求
         AppendEntriesResponse,              // 收到同步日志响应
         RequestVoteRequest,                 // Raft 发起选举，需要发送投票请求
