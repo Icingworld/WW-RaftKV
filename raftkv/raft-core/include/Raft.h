@@ -117,6 +117,12 @@ private:
     void _HandleAppendEntriesResponse(const RaftMessage & _Message);
 
     /**
+     * @brief 应用已经提交的日志
+     * @param _Commit_index 需要应用到的日志索引
+    */
+    void _ApplyCommitedLogs();
+
+    /**
      * @brief 随机生成超时时间
      * @param _Timeout_min 最小时间
      * @param _Timeout_max 最大时间

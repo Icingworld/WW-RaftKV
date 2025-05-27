@@ -80,6 +80,11 @@ public:
     TermId getLastTerm() const;
 
     /**
+     * @brief 获取指定索引的日志
+    */
+    const RaftLogEntry & getLog(LogIndex _Index) const;
+
+    /**
      * @brief 获取指定索引的任期号
     */
     TermId getTerm(LogIndex _Index) const;
@@ -103,6 +108,22 @@ public:
      * @brief 判断日志索引和任期是否匹配
     */
     bool match(LogIndex _Index, TermId _Term) const;
+
+    /**
+     * @brief 添加日志
+    */
+    void append(const RaftLogEntry & _Log_entry);
+
+    /**
+     * @brief 从某处开始截断日志
+     * @param _Truncate_index 需要截断的索引
+    */
+    void truncate(LogIndex _Truncate_index);
+
+    /**
+     * @brief 获取指定索引之后的日志条目
+    */
+    std::vector<RaftLogEntry> getLogFrom(LogIndex _Index);
 
     /**
      * @brief 设置任期号

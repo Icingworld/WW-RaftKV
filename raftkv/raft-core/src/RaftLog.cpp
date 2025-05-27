@@ -7,7 +7,7 @@ namespace WW
 
 RaftLog::RaftLog()
     : _Logs()
-    , _Base_index(0)
+    , _Base_index(1)
 {
 }
 
@@ -45,7 +45,7 @@ const RaftLogEntry & RaftLog::at(LogIndex _Index) const
 
 bool RaftLog::match(LogIndex _Index, TermId _Term) const
 {
-    if (_Index == -1) {
+    if (_Index == 0) {
         // 空日志
         return true;
     }
@@ -72,6 +72,18 @@ void RaftLog::truncate(LogIndex _Truncate_index)
 
     // 通过 resize 丢弃指定范围日志
     _Logs.resize(_Truncate_index - _Base_index);
+}
+
+std::vector<RaftLogEntry> RaftLog::getLogFrom(LogIndex _Index) const
+{
+    std::vector<RaftLogEntry> tmp;
+
+    if (_Index < _Base_index || _Index > getLastIndex()) {
+        return tmp;
+    }
+
+    tmp.assign(_Logs.begin() + _Index - _Base_index, _Logs.end());
+    return tmp;
 }
 
 } // namespace WW

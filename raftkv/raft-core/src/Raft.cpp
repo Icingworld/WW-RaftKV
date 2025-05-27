@@ -154,7 +154,8 @@ void Raft::_SendAppendEntries(bool _IsHearbeat)
         
         if (!_IsHearbeat) {
             // 添加日志条目
-            // TODO
+            // 从该 Follower 的 nextIndex 开始添加日志
+            heartbeat_request.entries = _Node.getLogFrom(peer.getNextIndex());
         }
 
         // 找到该 peer 所持有的最新日志索引
@@ -336,6 +337,9 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     if (!_Node.match(other_last_log_index, other_last_log_term)) {
         // 日志存在冲突，需要 Leader 进行回退
         DEBUG("log doesn't match, refuse append entries");
+        // 截断该索引之后的所有日志
+        _Node.truncate(other_last_log_index);
+        // 告知自己的索引位置，冲突情况下不使用
         response.index = _Node.getLastIndex();
         _Outter_messages = response;
         return;
@@ -353,8 +357,15 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     // 4. 同步日志
     if (!other_entries.empty()) {
         // 不是心跳，需要同步日志
-        // TODO
+        for (const RaftLogEntry & entry : other_entries) {
+            DEBUG("append entry:");
+            DEBUG("term: %zu, command: %s", entry.getTerm(), entry.getCommand().c_str());
+            _Node.append(entry);
+        }
     }
+
+    // 应用日志
+    _ApplyCommitedLogs();
 
     // 5. 响应成功
     DEBUG("append entries success");
@@ -431,7 +442,27 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
     // 5. 如果该日志是当前任期的，同步
     if (_Node.getTerm(majority_match) == _Node.getTerm()) {
         _Node.setLastCommitIndex(majority_match);
+
+        // 应用日志
+        _ApplyCommitedLogs();
     }
+}
+
+void Raft::_ApplyCommitedLogs()
+{
+    // 构造一个上下文消息
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::LogEntriesApply;
+
+    while (_Node.getLastAppliedIndex() < _Node.getLastCommitIndex()) {
+        _Node.setLastAppliedIndex(_Node.getLastAppliedIndex() + 1);
+
+        const RaftLogEntry & entry = _Node.getLog(_Node.getLastAppliedIndex());
+        message.entries.emplace_back(entry);
+    }
+
+    // 传出上下文
+    _Inner_messages.emplace_back(message);
 }
 
 int Raft::_GetRandomTimeout(int _Timeout_min, int _Timeout_max) const

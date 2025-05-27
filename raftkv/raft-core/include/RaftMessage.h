@@ -19,6 +19,7 @@ public:
         AppendEntriesResponse,              // 收到同步日志响应
         RequestVoteRequest,                 // Raft 发起选举，需要发送投票请求
         RequestVoteResponse,                // 收到投票响应
+        LogEntriesApply,                    // 应用日志到状态机
         TBD                                 // To be designed
     };
 

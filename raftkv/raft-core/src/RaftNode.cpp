@@ -9,8 +9,8 @@ RaftNode::RaftNode(NodeId _Id)
     , _Role(NodeRole::Follower)
     , _Logs()
     , _Voted_for(-1)
-    , _Last_commit_index(-1)
-    , _Last_applied_index(-1)
+    , _Last_commit_index(0)
+    , _Last_applied_index(0)
 {
 }
 
@@ -54,6 +54,11 @@ TermId RaftNode::getLastTerm() const
     return _Logs.getLastTerm();
 }
 
+const RaftLogEntry & RaftNode::getLog(LogIndex _Index) const
+{
+    return _Logs.at(_Index);
+}
+
 TermId RaftNode::getTerm(LogIndex _Index) const
 {
     return _Logs.getTerm(_Index);
@@ -77,6 +82,21 @@ bool RaftNode::isLeader() const
 bool RaftNode::match(LogIndex _Index, TermId _Term) const
 {
     return _Logs.match(_Index, _Term);
+}
+
+void RaftNode::append(const RaftLogEntry & _Log_entry)
+{
+    _Logs.append(_Log_entry);
+}
+
+void RaftNode::truncate(LogIndex _Truncate_index)
+{
+    _Logs.truncate(_Truncate_index);
+}
+
+std::vector<RaftLogEntry> RaftNode::getLogFrom(LogIndex _Index)
+{
+    return _Logs.getLogFrom(_Index);
 }
 
 void RaftNode::setTerm(TermId _Term)

@@ -32,6 +32,9 @@ public:
     */
     TermId getLastTerm() const;
 
+    /**
+     * @brief 获取指定索引日志的任期
+    */
     TermId getTerm(LogIndex _Index) const;
 
     /**
@@ -39,6 +42,11 @@ public:
      * @param _Index 索引
     */
     const RaftLogEntry & at(LogIndex _Index) const;
+
+    /**
+     * @brief 获取指定索引之后的日志条目
+    */
+    std::vector<RaftLogEntry> getLogFrom(LogIndex _Index) const;
 
     /**
      * @brief 判断索引和任期是否匹配

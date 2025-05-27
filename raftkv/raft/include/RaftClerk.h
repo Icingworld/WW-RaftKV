@@ -4,6 +4,7 @@
 #include <mutex>
 #include <atomic>
 
+#include <KVStore.h>
 #include <Raft.h>
 #include <RaftPeerNet.h>
 #include <RaftRpcServiceImpl.h>
@@ -24,6 +25,8 @@ private:
 private:
     Raft * _Raft;                       // Raft 协议
     std::vector<RaftPeerNet> _Peers;    // 存储网络信息
+
+    KVStore<std::string, std::string> _KVStore;  // KV 储存
 
     // 定时器线程
     std::atomic<bool> _Running;         // 运行状态
@@ -75,6 +78,11 @@ private:
     void _SendAppendEntriesRequest(const RaftMessage & _Message);
 
     /**
+     * @brief 处理应用日志的消息
+    */
+    void _ApplyLogEntries(const RaftMessage & _Message);
+
+    /**
      * @brief 处理 Rpc 收到的投票请求
     */
     void _HandleRequestVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response);
@@ -93,6 +101,11 @@ private:
      * @brief 处理 Rpc 收到的日志同步响应
     */
     void _HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse & _Response);
+
+    /**
+     * @brief 解析并执行命令
+    */
+    void _ParseAndExecCommand(const std::string & _Command);
 };
 
 } // namespace WW

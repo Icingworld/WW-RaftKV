@@ -1,5 +1,7 @@
 #include "RaftClerk.h"
 
+#include <sstream>
+
 #include <RaftPeer.h>
 #include <RaftRpcClient.h>
 #include <RaftLogger.h>
@@ -91,6 +93,9 @@ void RaftClerk::_HandleRaftMessageOut(const RaftMessage & _Message)
         case RaftMessage::MessageType::AppendEntriesRequest:
             _SendAppendEntriesRequest(_Message);
             break;
+        case RaftMessage::MessageType::LogEntriesApply:
+            _ApplyLogEntries(_Message);
+            break;
         default:
             break;
     }
@@ -159,6 +164,19 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 
     // 分离线程
     temp_thread.detach();
+}
+
+void RaftClerk::_ApplyLogEntries(const RaftMessage & _Message)
+{
+    // 取出请求中的消息
+    const std::vector<RaftLogEntry> & entries = _Message.entries;
+
+    // 解析日志条目中的命令
+    for (const RaftLogEntry & entry : entries) {
+        std::string command = entry.getCommand();
+
+        _ParseAndExecCommand(command);
+    }
 }
 
 void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response)
@@ -277,6 +295,58 @@ void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResp
     // 传递给 Raft 状态机
     std::lock_guard<std::mutex> lock(_Mutex);
     _Raft->step(message);
+}
+
+void RaftClerk::_ParseAndExecCommand(const std::string & _Command)
+{
+    // 解析命令
+    std::istringstream iss(_Command);
+    std::string op;
+    iss >> op;
+
+    if (op == "put") {
+        // 1. 插入操作
+        std::string key, value;
+        iss >> key >> value;
+        if (!key.empty() && !value.empty()) {
+            if (!_KVStore.put(key, value)) {
+                ERROR("kvstore put key: %s, value: %s failed", key.c_str(), value.c_str());
+            } else {
+                DEBUG("kvstore put key: %s, value: %s success", key.c_str(), value.c_str());
+            }
+        } else {
+            ERROR("invalid put command");
+        }
+    } else if (op == "update") {
+        // 2. 更新操作
+        std::string key, value;
+        iss >> key >> value;
+        if (!key.empty() && !value.empty()) {
+            if (!_KVStore.update(key, value)) {
+                ERROR("kvstore update key: %s, value: %s failed", key.c_str(), value.c_str());
+            } else {
+                DEBUG("kvstore update key: %s, value: %s success", key.c_str(), value.c_str());
+            }
+        } else {
+            ERROR("invalid update command");
+        }
+    } else if (op == "remove") {
+        // 3. 删除操作
+        std::string key;
+        iss >> key;
+        if (!key.empty()) {
+            if (!_KVStore.remove(key)) {
+                ERROR("kvstore remove key: %s failed", key.c_str());
+            } else {
+                DEBUG("kvstore remove key: %s success", key.c_str());
+            }
+        } else {
+            ERROR("invalid remove command");
+        }
+    }
+    else {
+        ERROR("unknown kvstore command: %s", op.c_str());
+    }
 }
 
 } // namespace WW
