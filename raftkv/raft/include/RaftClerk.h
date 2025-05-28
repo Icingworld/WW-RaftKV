@@ -32,7 +32,8 @@ private:
     // 定时器线程
     std::atomic<bool> _Running;         // 运行状态
     int _Timeout;                       // 定时器
-    std::thread _Client_thread;         // 客户端线程
+    std::thread _Server_thread;         // 服务端线程
+    std::thread _Op_thread;             // 操作线程
 
     // 多线程
     std::mutex _Mutex;                  // 保护 Raft 状态

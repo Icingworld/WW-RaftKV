@@ -27,7 +27,7 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
     // 初始化 Raft 操作服务端
     _Op_service.setRaftClerk(this);
-    _Op_server = new RaftOperationServer(_Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Service);
+    _Op_server = new RaftOperationServer(_Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Op_service);
 
     // 设置 muduo 日志等级
     muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
@@ -41,22 +41,28 @@ RaftClerk::~RaftClerk()
 
 void RaftClerk::run()
 {
-    // 运行客户端线程
     _Running.store(true);
-    _Client_thread = std::thread(&RaftClerk::_ClientWorking, this);
+    
 
     // 运行服务端
-    DEBUG("server running.");
-    _Server->run();
+    _Server_thread = std::thread([this]() {
+        DEBUG("server running");
+        _Server->run();
+    });
+    
+    _Op_thread = std::thread([this]() {
+        DEBUG("operation server running");
+        _Op_server->run();
+    });
+
+    // 运行客户端
+    _ClientWorking();
 }
 
 void RaftClerk::stop()
 {
-    // 关闭定时器线程
+    // 关闭定时器
     _Running.store(false);
-    if (_Client_thread.joinable()) {
-        _Client_thread.join();
-    }
 }
 
 void RaftClerk::_ClientWorking()
@@ -353,6 +359,11 @@ void RaftClerk::_ParseAndExecCommand(const std::string & _Command)
     else {
         ERROR("unknown kvstore command: %s", op.c_str());
     }
+}
+
+void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request, RaftOperationResponse & _Response)
+{
+    DEBUG("receive operation request");
 }
 
 } // namespace WW

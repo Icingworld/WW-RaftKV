@@ -11,7 +11,7 @@ RaftRpcDispatcher::RaftRpcDispatcher(const std::string & _Ip, const std::string 
     : _Ip(_Ip)
     , _Port(_Port)
     , _Service_map()
-    , _Event_loop()
+    , _Event_loop(nullptr)
 {
 }
 
@@ -43,16 +43,19 @@ void RaftRpcDispatcher::registerService(google::protobuf::Service * _Service)
 
 void RaftRpcDispatcher::run()
 {
+    _Event_loop = new muduo::net::EventLoop();
+
     muduo::net::InetAddress address(_Ip, std::stoi(_Port));
-    muduo::net::TcpServer server(&_Event_loop, address, "RaftRpcDispatcher");
+    muduo::net::TcpServer server(_Event_loop, address, "RaftRpcDispatcher");
 
     // 设置回调函数
     server.setConnectionCallback(std::bind(&RaftRpcDispatcher::_OnConnection, this, std::placeholders::_1));
     server.setMessageCallback(std::bind(&RaftRpcDispatcher::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     // 启动
+    DEBUG("server start at: %s:%d", _Ip.c_str(), std::stoi(_Port));
     server.start();
-    _Event_loop.loop();
+    _Event_loop->loop();
 }
 
 void RaftRpcDispatcher::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
@@ -126,7 +129,7 @@ RaftOperationDispatcher::RaftOperationDispatcher(const std::string & _Ip, const 
     : _Ip(_Ip)
     , _Port(_Port)
     , _Service_map()
-    , _Event_loop()
+    , _Event_loop(nullptr)
 {
 }
 
@@ -158,16 +161,19 @@ void RaftOperationDispatcher::registerService(google::protobuf::Service * _Servi
 
 void RaftOperationDispatcher::run()
 {
-    muduo::net::InetAddress address(_Ip, std::stoi(_Port));
-    muduo::net::TcpServer server(&_Event_loop, address, "RaftOperationDispatcher");
+    _Event_loop = new muduo::net::EventLoop();
+
+    muduo::net::InetAddress address(_Ip, std::stoi(_Port) + 1);
+    muduo::net::TcpServer server(_Event_loop, address, "RaftOperationDispatcher");
 
     // 设置回调函数
     server.setConnectionCallback(std::bind(&RaftOperationDispatcher::_OnConnection, this, std::placeholders::_1));
     server.setMessageCallback(std::bind(&RaftOperationDispatcher::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     // 启动
+    DEBUG("server start at: %s:%d", _Ip.c_str(), std::stoi(_Port) + 1);
     server.start();
-    _Event_loop.loop();
+    _Event_loop->loop();
 }
 
 void RaftOperationDispatcher::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
