@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package WW;
+
+option cc_generic_services = true;
+
+// 客户端请求类型
+enum CommandType {
+    PUT = 0;                        // 插入
+    UPDATE = 1;                     // 更新
+    REMOVE = 2;                     // 删除
+    GET = 3;                        // 读取
+}
+
+// 客户端发给节点的请求
+message RaftOperationRequest {
+    CommandType type = 1;
+    string key = 2;
+    string value = 3;               // get/remove 时可为空
+}
+
+// 服务端返回的响应
+message RaftOperationResponse {
+    bool success = 1;               // 操作是否成功
+    string value = 3;               // get 操作时返回的值
+    bool is_leader = 4;             // 是否为 Leader
+    string leader_address = 5;      // 如果不是 Leader，返回当前 Leader 地址
+}
+
+service RaftOperationService {
+    rpc OperateRaft(RaftOperationRequest) returns (RaftOperationResponse);
+}
