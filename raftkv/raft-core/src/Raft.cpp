@@ -53,6 +53,9 @@ void Raft::step(const RaftMessage & _Message)
         case RaftMessage::MessageType::AppendEntriesResponse:
             _HandleAppendEntriesResponse(_Message);
             break;
+        case RaftMessage::MessageType::OperationRequest:
+            _HandleOperationRequest(_Message);
+            break;
         default:
             break;
     }
@@ -369,6 +372,10 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
 
     // 5. 响应成功
     DEBUG("append entries success");
+
+    // 设置 Leader ID
+    _Node.setLeaderId(other_id);
+
     response.index = _Node.getLastIndex();
     response.reject = false;
 
@@ -435,7 +442,6 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
         match_indexes.emplace_back(peer.getMatchIndex());
     }
 
-    // TODO 有优化空间
     std::sort(match_indexes.begin(), match_indexes.end());
     LogIndex majority_match = match_indexes[match_indexes.size() / 2];
 
@@ -446,6 +452,29 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
         // 应用日志
         _ApplyCommitedLogs();
     }
+}
+
+void Raft::_HandleOperationRequest(const RaftMessage & _Message)
+{
+    // 构造响应上下文消息
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::OPerationResponse;
+    message.reject = true;
+
+    if (!_Node.isLeader()) {
+        // 不是 Leader，返回 Leader 地址
+        DEBUG("not leader, refuse operation");
+        message.to = _Node.getLeaderId();
+        _Outter_messages = message;
+        return;
+    }
+
+    // 同意操作
+    // TODO 更严格的一致性
+    message.reject = false;
+    message.from = _Node.getId();
+
+    _Outter_messages = message;
 }
 
 void Raft::_ApplyCommitedLogs()

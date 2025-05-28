@@ -18,7 +18,7 @@ void SendOperationCommand(std::string & ip, std::string & port, const WW::RaftOp
 
     WW::RaftOperationResponse response;
 
-    google::protobuf::Closure * done = new WW::RaftLambdaClosure([=, &request]() {
+    google::protobuf::Closure * done = new WW::RaftLambdaClosure([&request, &response]() {
         ParseResponse(request, response);
     });
 

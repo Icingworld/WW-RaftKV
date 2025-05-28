@@ -244,7 +244,7 @@ void RaftClerk::_HandleRequestVoteResponse(const RequestVoteResponse & _Response
 
 void RaftClerk::_HandleAppendEntriesRequest(const AppendEntriesRequest & _Request, AppendEntriesResponse & _Response)
 {
-    // 取出响应中的信息
+    // 取出请求中的信息
     TermId other_term = _Request.term();
     NodeId other_id = _Request.leader_id();
     LogIndex other_prev_log_index = _Request.prev_log_index();
@@ -364,6 +364,87 @@ void RaftClerk::_ParseAndExecCommand(const std::string & _Command)
 void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request, RaftOperationResponse & _Response)
 {
     DEBUG("receive operation request");
+    // 取出请求中的信息
+    CommandType type = _Request.type();
+    std::string key = _Request.key();
+    std::string value = _Request.value();
+
+    // 构造上下文消息
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::OperationRequest;
+    message.key = key;
+    message.value = value;
+
+    switch (type) {
+        case CommandType::PUT:
+            message.op_type = RaftMessage::OperationType::PUT;
+            DEBUG("put %s %s", key.c_str(), value.c_str());
+            break;
+        case CommandType::UPDATE:
+            message.op_type = RaftMessage::OperationType::UPDATE;
+            DEBUG("update %s %s", key.c_str(), value.c_str());
+            break;
+        case CommandType::REMOVE:
+            message.op_type = RaftMessage::OperationType::REMOVE;
+            DEBUG("remove %s", key.c_str());
+            break;
+        case CommandType::GET:
+            message.op_type = RaftMessage::OperationType::GET;
+            DEBUG("get %s", key.c_str());
+            break;
+        default:
+            break;
+    }
+
+    std::unique_lock<std::mutex> lock(_Mutex);
+    _Raft->step(message);
+
+    // 取出当此响应
+    const RaftMessage & out_message = _Raft->readOutterMessage();
+    lock.unlock();
+
+    // 读取消息中的信息
+    bool this_reject = out_message.reject;
+    NodeId leader_id;
+
+    if (!this_reject) {
+        leader_id = out_message.from;
+    } else {
+        leader_id = out_message.to;
+    }
+
+    if (!this_reject) {
+        // 是 Leader，允许操作
+        switch (type) {
+            case CommandType::PUT:
+                _KVStore.put(key, value);
+                break;
+            case CommandType::UPDATE:
+                _KVStore.update(key, value);
+                break;
+            case CommandType::REMOVE:
+                _KVStore.remove(key);
+                break;
+            case CommandType::GET:
+                value = _KVStore.get(key);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // 组织响应消息
+    _Response.set_success(!this_reject);
+    _Response.set_value(value);
+    
+    if (this_reject) {
+        // 不是 Leader，返回 Leader 的地址
+        _Response.set_is_leader(!this_reject);
+
+        // 取出对应节点地址
+        const RaftPeerNet & peer = _Peers[leader_id];
+        _Response.set_leader_address(peer.getIp() + ":" + peer.getPort());
+    }
 }
 
 } // namespace WW

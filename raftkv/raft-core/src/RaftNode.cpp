@@ -9,6 +9,7 @@ RaftNode::RaftNode(NodeId _Id)
     , _Role(NodeRole::Follower)
     , _Logs()
     , _Voted_for(-1)
+    , _Leader_id(-1)
     , _Last_commit_index(0)
     , _Last_applied_index(0)
 {
@@ -32,6 +33,11 @@ RaftNode::NodeRole RaftNode::getRole() const
 NodeId RaftNode::getVotedFor() const
 {
     return _Voted_for;
+}
+
+NodeId RaftNode::getLeaderId() const
+{
+    return _Leader_id;
 }
 
 LogIndex RaftNode::getLastCommitIndex() const
@@ -127,6 +133,11 @@ void RaftNode::switchToLeader()
 void RaftNode::setVotedFor(NodeId _Id)
 {
     _Voted_for = _Id;
+}
+
+void RaftNode::setLeaderId(NodeId _Id)
+{
+    _Leader_id = _Id;
 }
 
 void RaftNode::setLastCommitIndex(LogIndex _Last_commit_index)

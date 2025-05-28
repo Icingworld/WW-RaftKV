@@ -29,6 +29,7 @@ private:
 
     // 选举信息
     NodeId _Voted_for;              // 投票目标节点
+    NodeId _Leader_id;              // Leader ID
 
     // 日志信息
     RaftLog _Logs;                  // 日志记录
@@ -58,6 +59,11 @@ public:
      * @brief 获取投票节点 ID
     */
     NodeId getVotedFor() const;
+
+    /**
+     * @brief 获取 Leader ID
+    */
+    NodeId getLeaderId() const;
 
     /**
      * @brief 获取最新提交日志的索引
@@ -153,7 +159,12 @@ public:
     /**
      * @brief 设置投票目标节点
     */
-    void setVotedFor(NodeId node);
+    void setVotedFor(NodeId _Id);
+
+    /**
+     * @brief 设置 Leader ID
+    */
+    void setLeaderId(NodeId _Id);
 
     /**
      * @brief 设置最新提交日志的索引

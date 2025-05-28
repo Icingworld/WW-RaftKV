@@ -117,6 +117,11 @@ private:
     void _HandleAppendEntriesResponse(const RaftMessage & _Message);
 
     /**
+     * @brief 处理接收到的操作请求
+    */
+    void _HandleOperationRequest(const RaftMessage & _Message);
+
+    /**
      * @brief 应用已经提交的日志
      * @param _Commit_index 需要应用到的日志索引
     */
