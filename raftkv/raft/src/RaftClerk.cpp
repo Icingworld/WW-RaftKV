@@ -37,13 +37,13 @@ RaftClerk::~RaftClerk()
 {
     delete _Raft;
     delete _Server;
+    delete _Op_server;
 }
 
 void RaftClerk::run()
 {
     _Running.store(true);
     
-
     // 运行服务端
     _Server_thread = std::thread([this]() {
         DEBUG("server running");
@@ -180,6 +180,7 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 
 void RaftClerk::_ApplyLogEntries(const RaftMessage & _Message)
 {
+    // DEBUG("apply log entries");
     // 取出请求中的消息
     const std::vector<RaftLogEntry> & entries = _Message.entries;
 
@@ -372,25 +373,27 @@ void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request,
     // 构造上下文消息
     RaftMessage message;
     message.type = RaftMessage::MessageType::OperationRequest;
-    message.key = key;
-    message.value = value;
 
     switch (type) {
         case CommandType::PUT:
             message.op_type = RaftMessage::OperationType::PUT;
-            DEBUG("put %s %s", key.c_str(), value.c_str());
+            message.command = "put " + key + " " + value;
+            DEBUG("command: %s", message.command.c_str());
             break;
         case CommandType::UPDATE:
             message.op_type = RaftMessage::OperationType::UPDATE;
-            DEBUG("update %s %s", key.c_str(), value.c_str());
+            message.command = "update " + key + " " + value;
+            DEBUG("command: %s", message.command.c_str());
             break;
         case CommandType::REMOVE:
             message.op_type = RaftMessage::OperationType::REMOVE;
-            DEBUG("remove %s", key.c_str());
+            message.command = "remove " + key;
+            DEBUG("command: %s", message.command.c_str());
             break;
         case CommandType::GET:
             message.op_type = RaftMessage::OperationType::GET;
-            DEBUG("get %s", key.c_str());
+            message.command = "get " + key;
+            DEBUG("command: %s", message.command.c_str());
             break;
         default:
             break;
@@ -414,22 +417,9 @@ void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request,
     }
 
     if (!this_reject) {
-        // 是 Leader，允许操作
-        switch (type) {
-            case CommandType::PUT:
-                _KVStore.put(key, value);
-                break;
-            case CommandType::UPDATE:
-                _KVStore.update(key, value);
-                break;
-            case CommandType::REMOVE:
-                _KVStore.remove(key);
-                break;
-            case CommandType::GET:
-                value = _KVStore.get(key);
-                break;
-            default:
-                break;
+        // 是 Leader，允许 get 操作
+        if (type = CommandType::GET) {
+            value = _KVStore.get(key);
         }
     }
 

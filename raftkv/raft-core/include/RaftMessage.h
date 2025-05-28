@@ -43,10 +43,9 @@ public:
     LogIndex commit;                        // 提交日志索引
     std::vector<RaftLogEntry> entries;      // 日志条目数组
     bool reject;                            // 是否拒绝
-    
-    OperationType op_type;
-    std::string key;                        // 键
-    std::string value;                      // 值
+        
+    OperationType op_type;                  // 操作类型
+    std::string command;                    // 操作命令
 };
 
 } // namespace WW

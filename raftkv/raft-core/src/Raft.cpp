@@ -90,7 +90,7 @@ void Raft::_TickHeartbeat()
 {
     if (_Heartbeat_interval >= _Heartbeat_timeout) {
         // 超时，发送心跳
-        DEBUG("send heartbeat");
+        // DEBUG("send heartbeat");
         _ResetHeartbeatTimeout();
         _SendAppendEntries(true);
     }
@@ -470,15 +470,25 @@ void Raft::_HandleOperationRequest(const RaftMessage & _Message)
     }
 
     // 同意操作
-    // TODO 更严格的一致性
     message.reject = false;
     message.from = _Node.getId();
+
+    // 生成并添加一条日志
+    if (_Message.op_type != RaftMessage::OperationType::GET) {
+        DEBUG("append a new log entry, term: %zu, command: %s", _Node.getTerm(), _Message.command.c_str());
+        RaftLogEntry new_log(_Node.getTerm(), _Message.command);
+        _Node.append(new_log);
+
+        // 发送日志同步请求
+        _SendAppendEntries(false);
+    }
 
     _Outter_messages = message;
 }
 
 void Raft::_ApplyCommitedLogs()
 {
+    // DEBUG("apply commitd logs");
     // 构造一个上下文消息
     RaftMessage message;
     message.type = RaftMessage::MessageType::LogEntriesApply;
