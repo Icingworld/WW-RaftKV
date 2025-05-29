@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include <iostream>
-
 #include <Common.h>
 
 namespace WW
@@ -738,9 +736,6 @@ private:
         // 使用一个数组来储存前一个结点的向前指针，为了避免越界，直接初始化大小为最大大小
         std::vector<node_pointer> _Update_list(_Max_level_index + 1, nullptr);
         node_pointer _Ptr = _Find_with_update(_Pair.first, _Update_list);
-
-        if (!_Ptr)
-            std::cout << _Ptr->data().first << _Ptr->data().second << std::endl;
 
         // 判断是否已经存在
         if (_Ptr != nullptr && _Ptr->data().first == _Pair.first) {

@@ -493,15 +493,16 @@ void Raft::_HandleOperationRequest(const RaftMessage & _Message)
 
 void Raft::_ApplyCommitedLogs()
 {
-    // DEBUG("apply commitd logs");
     // 构造一个上下文消息
     RaftMessage message;
     message.type = RaftMessage::MessageType::LogEntriesApply;
 
     while (_Node.getLastAppliedIndex() < _Node.getLastCommitIndex()) {
+        DEBUG("last applied: %d, last commited: %d", _Node.getLastAppliedIndex(), _Node.getLastCommitIndex());
         _Node.setLastAppliedIndex(_Node.getLastAppliedIndex() + 1);
 
         const RaftLogEntry & entry = _Node.getLog(_Node.getLastAppliedIndex());
+        DEBUG("apply commitd logs");
         message.entries.emplace_back(entry);
     }
 

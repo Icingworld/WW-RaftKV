@@ -390,7 +390,7 @@ void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request,
     std::unique_lock<std::mutex> lock(_Mutex);
     _Raft->step(message);
 
-    // 取出当此响应
+    // 取出响应上下文消息
     const RaftMessage & out_message = _Raft->readOutterMessage();
     lock.unlock();
 
@@ -406,7 +406,7 @@ void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request,
 
     if (!this_reject) {
         // 是 Leader，允许 get 操作
-        if (type = CommandType::GET) {
+        if (type == CommandType::GET) {
             value = _KVStore.get(key);
         }
     }
@@ -414,7 +414,7 @@ void RaftClerk::_HandleOperateRaftRequest(const RaftOperationRequest & _Request,
     // 组织响应消息
     _Response.set_success(!this_reject);
     _Response.set_value(value);
-    
+
     if (this_reject) {
         // 不是 Leader，返回 Leader 的地址
         _Response.set_is_leader(!this_reject);
