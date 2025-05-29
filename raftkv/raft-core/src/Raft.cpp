@@ -76,6 +76,11 @@ void Raft::clearInnerMessage()
     _Inner_messages.clear();
 }
 
+NodeId Raft::getId() const
+{
+    return _Node.getId();
+}
+
 void Raft::_TickElection()
 {
     if (_Election_interval >= _Election_timeout) {

@@ -16,7 +16,7 @@ private:
     RaftRpcDispatcher * _Dispatcher;
 
 public:
-    RaftRpcServer(const std::string & _Ip, const std::string & _Port, google::protobuf::Service * _Service = nullptr);
+    RaftRpcServer(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port, google::protobuf::Service * _Service = nullptr);
 
     ~RaftRpcServer();
 
@@ -24,7 +24,7 @@ public:
     /**
      * @brief 启动服务端
     */
-    void run();
+    void start();
 
     /**
      * @brief 注册服务
@@ -41,7 +41,7 @@ private:
     RaftOperationDispatcher * _Dispatcher;
 
 public:
-    RaftOperationServer(const std::string & _Ip, const std::string & _Port, google::protobuf::Service * _Service = nullptr);
+    RaftOperationServer(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port, google::protobuf::Service * _Service = nullptr);
 
     ~RaftOperationServer();
 
@@ -49,7 +49,7 @@ public:
     /**
      * @brief 启动服务端
     */
-    void run();
+    void start();
 
     /**
      * @brief 注册服务

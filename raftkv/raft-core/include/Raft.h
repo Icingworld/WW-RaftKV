@@ -65,6 +65,11 @@ public:
     */
     void clearInnerMessage();
 
+    /**
+     * @brief 获取 Raft 节点 ID
+    */
+    NodeId getId() const;
+
 private:
     /**
      * @brief 选举时间判断

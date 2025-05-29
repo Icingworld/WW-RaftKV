@@ -32,9 +32,10 @@ private:
     std::string _Port;
     std::unordered_map<std::string, ServiceInfo> _Service_map;      // 服务名-服务信息
     muduo::net::EventLoop * _Event_loop;                            // 事件循环
+    muduo::net::TcpServer * _Server;
 
 public:
-    RaftRpcDispatcher(const std::string & _Ip, const std::string & _Port);
+    RaftRpcDispatcher(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
 
 public:
     /**
@@ -46,7 +47,7 @@ public:
     /**
      * @brief 启动分发器
      */
-    void run();
+    void start();
 
 private:
     /**
@@ -87,9 +88,10 @@ private:
     std::string _Port;
     std::unordered_map<std::string, ServiceInfo> _Service_map;      // 服务名-服务信息
     muduo::net::EventLoop * _Event_loop;                            // 事件循环
+    muduo::net::TcpServer * _Server;
 
 public:
-    RaftOperationDispatcher(const std::string & _Ip, const std::string & _Port);
+    RaftOperationDispatcher(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
 
 public:
     /**
@@ -101,7 +103,7 @@ public:
     /**
      * @brief 启动分发器
      */
-    void run();
+    void start();
 
 private:
     /**

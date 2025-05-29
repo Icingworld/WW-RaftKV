@@ -9,7 +9,9 @@
 #include <RaftPeerNet.h>
 #include <RaftRpcServiceImpl.h>
 #include <RaftRpcServer.h>
+#include <RaftRpcClient.h>
 #include <Raft.pb.h>
+#include <muduo/net/EventLoop.h>
 
 namespace WW
 {
@@ -26,19 +28,20 @@ private:
 private:
     Raft * _Raft;                       // Raft 协议
     std::vector<RaftPeerNet> _Peers;    // 存储网络信息
+    std::vector<RaftRpcClient *> _Clients;
 
     KVStore<std::string, std::string> _KVStore;  // KV 储存
 
     // 定时器线程
     std::atomic<bool> _Running;         // 运行状态
-    int _Timeout;                       // 定时器
-    std::thread _Server_thread;         // 服务端线程
-    std::thread _Op_thread;             // 操作线程
+    double _Timeout;                       // 定时器
 
     // 多线程
     std::mutex _Mutex;                  // 保护 Raft 状态
 
     // 服务端
+    muduo::net::EventLoop _Loop;
+
     RaftRpcServiceImpl _Service;        // 服务实例
     RaftRpcServer * _Server;            // 服务端
     RaftOperationServiceImpl _Op_service;

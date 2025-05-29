@@ -7,11 +7,11 @@
 namespace WW
 {
 
-RaftRpcClient::RaftRpcClient(const std::string & _Ip, const std::string & _Port)
+RaftRpcClient::RaftRpcClient(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port)
     : _Stub(nullptr)
     , _Channel(nullptr)
 {
-    _Channel = new RaftRpcChannel(_Ip, _Port);
+    _Channel = new RaftRpcChannel(_Loop, _Ip, _Port);
     _Stub = new RaftService_Stub(_Channel);
 }
 
@@ -36,6 +36,11 @@ void RaftRpcClient::AppendEntries(const AppendEntriesRequest & _Request, NodeId 
         _Callback(_To, _Response);
     });
     _Stub->AppendEntries(nullptr, &_Request, response, closure);
+}
+
+void RaftRpcClient::connect()
+{
+    _Channel->connect();
 }
 
 } // namespace WW
