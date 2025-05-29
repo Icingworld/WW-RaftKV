@@ -25,19 +25,17 @@ private:
         const google::protobuf::Message * _Request;
         google::protobuf::Message * _Response;
         google::protobuf::Closure * _Done;
-        muduo::net::TcpClient * _Client;        // 用于管理生命周期
     };
 
 private:
     std::string _Ip;        // 服务端 IP
     std::string _Port;      // 服务端 PORT
 
-    muduo::net::EventLoop _Event_loop;      // muduo 事件循环
-
-    CallMethodContext _Context;             // 网络连接上下文
+    muduo::net::EventLoop * _Event_loop;      // muduo 事件循环
+    muduo::net::TcpClient * _Client;
 
 public:
-    ClientChannel(const std::string & _Ip, const std::string & _Port);
+    ClientChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
 
     ~ClientChannel() = default;
 
@@ -57,6 +55,11 @@ public:
                     const google::protobuf::Message * _Request,
                     google::protobuf::Message * _Response,
                     google::protobuf::Closure * _Done) override;
+
+    /**
+     * @brief 连接服务端
+    */
+    void connect();
 
 private:
     /**

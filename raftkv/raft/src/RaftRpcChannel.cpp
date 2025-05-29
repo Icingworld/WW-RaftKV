@@ -13,7 +13,6 @@ RaftRpcChannel::RaftRpcChannel(muduo::net::EventLoop * _Loop, const std::string 
     : _Ip(_Ip)
     , _Port(_Port)
     , _Event_loop(_Loop)
-    , _Context()
 {
 }
 
@@ -37,11 +36,12 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
     muduo::net::TcpConnectionPtr conn = _Client->connection();
 
     // 设置上下文
-    _Context._Method = _Method;
-    _Context._Request = _Request;
-    _Context._Response = _Response;
-    _Context._Done = _Done;
-    conn->setContext(_Context);
+    CallMethodContext context;
+    context._Method = _Method;
+    context._Request = _Request;
+    context._Response = _Response;
+    context._Done = _Done;
+    conn->setContext(context);
 
     conn->send(request_str);
 }

@@ -376,7 +376,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     _ApplyCommitedLogs();
 
     // 5. 响应成功
-    DEBUG("append entries success");
+    // DEBUG("append entries success");       // too noisy
 
     // 设置 Leader ID
     _Node.setLeaderId(other_id);

@@ -37,8 +37,6 @@ private:
     muduo::net::EventLoop * _Event_loop;      // muduo 事件循环
     muduo::net::TcpClient * _Client;
 
-    CallMethodContext _Context;             // 网络连接上下文
-
 public:
     RaftRpcChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
 

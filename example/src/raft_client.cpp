@@ -1,31 +1,12 @@
 #include <string>
 #include <iostream>
-#include <future>
+#include <memory>
 
 #include <client_channel.h>
 #include <RaftOperation.pb.h>
 #include <RaftRpcClosure.h>
 
-static int count = 0;
-std::promise<void> done_signal;
-
-void ParseResponse(const WW::RaftOperationRequest & request, const WW::RaftOperationResponse & response);
-
-void SendOperationCommand(std::string & ip, std::string & port, const WW::RaftOperationRequest & request)
-{
-    ClientChannel channel(ip, port);
-    WW::RaftOperationService_Stub stub(&channel);
-
-    WW::RaftOperationResponse response;
-
-    google::protobuf::Closure * done = new WW::RaftLambdaClosure([&request, &response]() {
-        ParseResponse(request, response);
-    });
-
-    stub.OperateRaft(nullptr, &request, &response, done);
-}
-
-void ParseResponse(const WW::RaftOperationRequest & request, const WW::RaftOperationResponse & response)
+void ParseResponse(WW::RaftOperationService_Stub* stub, const WW::RaftOperationRequest& request, const WW::RaftOperationResponse& response)
 {
     bool success = response.success();
     std::string value = response.value();
@@ -34,75 +15,91 @@ void ParseResponse(const WW::RaftOperationRequest & request, const WW::RaftOpera
 
     if (success) {
         std::cout << value << std::endl;
-        done_signal.set_value();
         return;
     }
 
     if (is_leader) {
         std::cerr << "something went wrong" << std::endl;
-        done_signal.set_value();
-        return;
-    }
-
-    ++count;
-    if (count > 2) {
-        done_signal.set_value();
         return;
     }
 
     std::string ip;
     std::string port;
     size_t pos = leader_address.find(":");
-    
+
     if (pos != std::string::npos) {
-        ip = response.leader_address().substr(0, pos);
-        port = response.leader_address().substr(pos + 1);
+        ip = leader_address.substr(0, pos);
+        port = leader_address.substr(pos + 1);
+        std::cout << "leader is at: " << ip << ":" << port << std::endl;
     } else {
         std::cerr << "invalid leader address format" << std::endl;
-        done_signal.set_value();
-        return;
     }
-
-    SendOperationCommand(ip, port, request);
 }
 
-int main(int argc, char ** argv)
+void SendOperationCommand(WW::RaftOperationService_Stub* stub, std::shared_ptr<WW::RaftOperationRequest> request, muduo::net::EventLoop* loop)
 {
-    WW::RaftOperationRequest request;
+    auto response = std::make_shared<WW::RaftOperationResponse>();
+
+    google::protobuf::Closure* done = new WW::RaftLambdaClosure([=]() {
+        ParseResponse(stub, *request, *response);
+
+        loop->queueInLoop([loop]() {
+            loop->quit();
+        });
+    });
+
+    stub->OperateRaft(nullptr, request.get(), response.get(), done);
+}
+
+int main(int argc, char** argv)
+{
+    auto request = std::make_shared<WW::RaftOperationRequest>();
 
     if (argc > 1) {
         std::string operation = argv[1];
         if (operation == "put") {
-            request.set_type(WW::CommandType::PUT);
+            request->set_type(WW::CommandType::PUT);
         } else if (operation == "update") {
-            request.set_type(WW::CommandType::UPDATE);
+            request->set_type(WW::CommandType::UPDATE);
         } else if (operation == "remove") {
-            request.set_type(WW::CommandType::REMOVE);
+            request->set_type(WW::CommandType::REMOVE);
         } else if (operation == "get") {
-            request.set_type(WW::CommandType::GET);
+            request->set_type(WW::CommandType::GET);
         } else {
             std::cerr << "invalid operation!" << std::endl;
+            return 1;
         }
     }
 
     if (argc > 2) {
-        std::string key = argv[2];
-        request.set_key(key);
+        request->set_key(argv[2]);
     }
 
     if (argc > 3) {
-        std::string value = argv[3];
-        request.set_value(value);
+        request->set_value(argv[3]);
     }
 
     if (argc > 4) {
-        std::cerr << "invalid paramater!" << std::endl;
+        std::cerr << "invalid parameter!" << std::endl;
+        return 1;
     }
 
     std::string ip = "127.0.0.1";
     std::string port = "4397";
-    std::string ret = "";
 
-    SendOperationCommand(ip, port, request);
-    done_signal.get_future().wait();
+    muduo::net::EventLoop event_loop;
+
+    ClientChannel channel(&event_loop, ip, port);
+    WW::RaftOperationService_Stub stub(&channel);
+
+    channel.connect();
+
+    // runAfter 保证发送操作发生在连接建立之后
+    event_loop.runAfter(0.1, [&stub, request, &event_loop]() {
+        SendOperationCommand(&stub, request, &event_loop);
+    });
+
+    event_loop.loop();
+
+    return 0;
 }
