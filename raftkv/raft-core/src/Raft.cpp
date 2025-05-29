@@ -53,6 +53,9 @@ void Raft::step(const RaftMessage & _Message)
         case RaftMessage::MessageType::AppendEntriesResponse:
             _HandleAppendEntriesResponse(_Message);
             break;
+        case RaftMessage::MessageType::OperationRequest:
+            _HandleOperationRequest(_Message);
+            break;
         default:
             break;
     }
@@ -73,6 +76,11 @@ void Raft::clearInnerMessage()
     _Inner_messages.clear();
 }
 
+NodeId Raft::getId() const
+{
+    return _Node.getId();
+}
+
 void Raft::_TickElection()
 {
     if (_Election_interval >= _Election_timeout) {
@@ -87,7 +95,7 @@ void Raft::_TickHeartbeat()
 {
     if (_Heartbeat_interval >= _Heartbeat_timeout) {
         // 超时，发送心跳
-        DEBUG("send heartbeat");
+        // DEBUG("send heartbeat");
         _ResetHeartbeatTimeout();
         _SendAppendEntries(true);
     }
@@ -154,7 +162,8 @@ void Raft::_SendAppendEntries(bool _IsHearbeat)
         
         if (!_IsHearbeat) {
             // 添加日志条目
-            // TODO
+            // 从该 Follower 的 nextIndex 开始添加日志
+            heartbeat_request.entries = _Node.getLogFrom(peer.getNextIndex());
         }
 
         // 找到该 peer 所持有的最新日志索引
@@ -336,6 +345,9 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     if (!_Node.match(other_last_log_index, other_last_log_term)) {
         // 日志存在冲突，需要 Leader 进行回退
         DEBUG("log doesn't match, refuse append entries");
+        // 截断该索引之后的所有日志
+        _Node.truncate(other_last_log_index);
+        // 告知自己的索引位置，冲突情况下不使用
         response.index = _Node.getLastIndex();
         _Outter_messages = response;
         return;
@@ -353,11 +365,22 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     // 4. 同步日志
     if (!other_entries.empty()) {
         // 不是心跳，需要同步日志
-        // TODO
+        for (const RaftLogEntry & entry : other_entries) {
+            DEBUG("append entry:");
+            DEBUG("term: %zu, command: %s", entry.getTerm(), entry.getCommand().c_str());
+            _Node.append(entry);
+        }
     }
 
+    // 应用日志
+    _ApplyCommitedLogs();
+
     // 5. 响应成功
-    DEBUG("append entries success");
+    // DEBUG("append entries success");       // too noisy
+
+    // 设置 Leader ID
+    _Node.setLeaderId(other_id);
+
     response.index = _Node.getLastIndex();
     response.reject = false;
 
@@ -424,14 +447,67 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
         match_indexes.emplace_back(peer.getMatchIndex());
     }
 
-    // TODO 有优化空间
     std::sort(match_indexes.begin(), match_indexes.end());
     LogIndex majority_match = match_indexes[match_indexes.size() / 2];
 
     // 5. 如果该日志是当前任期的，同步
     if (_Node.getTerm(majority_match) == _Node.getTerm()) {
         _Node.setLastCommitIndex(majority_match);
+
+        // 应用日志
+        _ApplyCommitedLogs();
     }
+}
+
+void Raft::_HandleOperationRequest(const RaftMessage & _Message)
+{
+    // 构造响应上下文消息
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::OPerationResponse;
+    message.reject = true;
+
+    if (!_Node.isLeader()) {
+        // 不是 Leader，返回 Leader 地址
+        DEBUG("not leader, refuse operation");
+        message.to = _Node.getLeaderId();
+        _Outter_messages = message;
+        return;
+    }
+
+    // 同意操作
+    message.reject = false;
+    message.from = _Node.getId();
+
+    // 生成并添加一条日志
+    if (_Message.op_type != RaftMessage::OperationType::GET) {
+        DEBUG("append a new log entry, term: %zu, command: %s", _Node.getTerm(), _Message.command.c_str());
+        RaftLogEntry new_log(_Node.getTerm(), _Message.command);
+        _Node.append(new_log);
+
+        // 发送日志同步请求
+        _SendAppendEntries(false);
+    }
+
+    _Outter_messages = message;
+}
+
+void Raft::_ApplyCommitedLogs()
+{
+    // 构造一个上下文消息
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::LogEntriesApply;
+
+    while (_Node.getLastAppliedIndex() < _Node.getLastCommitIndex()) {
+        DEBUG("last applied: %d, last commited: %d", _Node.getLastAppliedIndex(), _Node.getLastCommitIndex());
+        _Node.setLastAppliedIndex(_Node.getLastAppliedIndex() + 1);
+
+        const RaftLogEntry & entry = _Node.getLog(_Node.getLastAppliedIndex());
+        DEBUG("apply commitd logs");
+        message.entries.emplace_back(entry);
+    }
+
+    // 传出上下文
+    _Inner_messages.emplace_back(message);
 }
 
 int Raft::_GetRandomTimeout(int _Timeout_min, int _Timeout_max) const

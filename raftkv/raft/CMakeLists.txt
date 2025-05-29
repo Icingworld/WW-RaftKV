@@ -9,6 +9,7 @@ target_include_directories(raft PUBLIC
 target_link_libraries(raft PUBLIC
     WW::raft-core
     WW::rpc-core
+    WW::kvstore
     third-party
 )
 

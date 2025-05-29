@@ -1,22 +1,20 @@
-#include "RaftRpcChannel.h"
+#include "client_channel.h"
+
+#include <iostream>
 
 #include <muduo/net/TcpConnection.h>
 #include <muduo/net/InetAddress.h>
 
 #include <RaftRpcSerialization.h>
-#include <RaftLogger.h>
 
-namespace WW
-{
-
-RaftRpcChannel::RaftRpcChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port)
+ClientChannel::ClientChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port)
     : _Ip(_Ip)
     , _Port(_Port)
     , _Event_loop(_Loop)
 {
 }
 
-void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Method,
+void ClientChannel::CallMethod(const google::protobuf::MethodDescriptor * _Method,
                                 google::protobuf::RpcController * _Controller,
                                 const google::protobuf::Message * _Request,
                                 google::protobuf::Message * _Response,
@@ -28,50 +26,52 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
 
     // 序列化请求
     std::string request_str;
-    if (!RaftRpcSerialization::serialize(service_name, method_name, *_Request, request_str)) {
+    if (!WW::RaftRpcSerialization::serialize(service_name, method_name, *_Request, request_str)) {
         // 序列化失败
         return;
     }
 
     muduo::net::TcpConnectionPtr conn = _Client->connection();
 
-    // 设置上下文
+    // 保存上下文
     CallMethodContext context;
     context._Method = _Method;
+    context._Controller = _Controller;
     context._Request = _Request;
     context._Response = _Response;
     context._Done = _Done;
     conn->setContext(context);
-
+    
+    // 发送请求
     conn->send(request_str);
 }
 
-void RaftRpcChannel::connect()
+void ClientChannel::connect()
 {
     // 创建地址
     muduo::net::InetAddress server_addr(_Ip, std::stoi(_Port));
 
     // 创建一个 TCP 连接
-    _Client = new muduo::net::TcpClient(_Event_loop, server_addr, "RaftRpcChannel");
+    _Client = new muduo::net::TcpClient(_Event_loop, server_addr, "ClientChannel");
 
     // 设置回调函数
-    _Client->setConnectionCallback(std::bind(&RaftRpcChannel::_OnConnection, this, std::placeholders::_1));
-    _Client->setMessageCallback(std::bind(&RaftRpcChannel::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    _Client->setConnectionCallback(std::bind(&ClientChannel::_OnConnection, this, std::placeholders::_1));
+    _Client->setMessageCallback(std::bind(&ClientChannel::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     // 连接
     _Client->connect();
 }
 
-void RaftRpcChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
+void ClientChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (_Conn->connected()) {
-        DEBUG("connected");
+        // std::cout << "connected" << std::endl;
     } else {
-        ERROR("disconnected");
+        std::cout << "disconnected" << std::endl;
     }
 }
 
-void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
+void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
     CallMethodContext context = boost::any_cast<CallMethodContext>(_Conn->getContext());
 
@@ -82,19 +82,21 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
     std::string service_name;
     std::string method_name;
     std::string args_str;
-    if (!RaftRpcSerialization::deserializeHeader(recv_buf, service_name, method_name, args_str)) {
+    if (!WW::RaftRpcSerialization::deserializeHeader(recv_buf, service_name, method_name, args_str)) {
         // 解析失败
-        return;
+        goto SHUTDOWN;
     }
 
     // 解析为 Message
-    if (!RaftRpcSerialization::deserializeArgs(args_str, context._Response)) {
+    if (!WW::RaftRpcSerialization::deserializeArgs(args_str, context._Response)) {
         // 解析失败
-        return;
+        goto SHUTDOWN;
     }
 
     // 调用回调函数，通知业务层
     context._Done->Run();
-}
 
-} // namespace WW
+    // 关闭连接
+SHUTDOWN:
+    _Conn->shutdown();
+}

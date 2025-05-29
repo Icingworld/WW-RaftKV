@@ -8,13 +8,10 @@
 #include <muduo/net/EventLoop.h>
 #include <muduo/net/TcpClient.h>
 
-namespace WW
-{
-
 /**
  * @brief RpcChannel
 */
-class RaftRpcChannel : public google::protobuf::RpcChannel
+class ClientChannel : public google::protobuf::RpcChannel
 {
 private:
     /**
@@ -38,9 +35,9 @@ private:
     muduo::net::TcpClient * _Client;
 
 public:
-    RaftRpcChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
+    ClientChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
 
-    ~RaftRpcChannel() = default;
+    ~ClientChannel() = default;
 
 public:
     /**
@@ -75,5 +72,3 @@ private:
     */
     void _OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time);
 };
-
-}

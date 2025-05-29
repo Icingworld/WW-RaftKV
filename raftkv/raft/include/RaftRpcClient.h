@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <thread>
 
 #include <RaftCommon.h>
 #include <RaftRpcChannel.h>
@@ -19,7 +20,7 @@ private:
     RaftRpcChannel * _Channel;      // 通道
 
 public:
-    RaftRpcClient(const std::string & _Ip, const std::string & _Port);
+    RaftRpcClient(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
 
     ~RaftRpcClient();
 
@@ -37,6 +38,11 @@ public:
      * @param callback 回调函数
     */
     void AppendEntries(const AppendEntriesRequest & _Request, NodeId _To, std::function<void(NodeId, const AppendEntriesResponse &)> _Callback);
+
+    /**
+     * @brief 连接 Raft 服务端
+    */
+    void connect();
 };
 
 } // namespace WW

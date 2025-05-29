@@ -29,6 +29,7 @@ private:
 
     // 选举信息
     NodeId _Voted_for;              // 投票目标节点
+    NodeId _Leader_id;              // Leader ID
 
     // 日志信息
     RaftLog _Logs;                  // 日志记录
@@ -60,6 +61,11 @@ public:
     NodeId getVotedFor() const;
 
     /**
+     * @brief 获取 Leader ID
+    */
+    NodeId getLeaderId() const;
+
+    /**
      * @brief 获取最新提交日志的索引
     */
     LogIndex getLastCommitIndex() const;
@@ -78,6 +84,11 @@ public:
      * @brief 获取最新日志任期
     */
     TermId getLastTerm() const;
+
+    /**
+     * @brief 获取指定索引的日志
+    */
+    const RaftLogEntry & getLog(LogIndex _Index) const;
 
     /**
      * @brief 获取指定索引的任期号
@@ -103,6 +114,22 @@ public:
      * @brief 判断日志索引和任期是否匹配
     */
     bool match(LogIndex _Index, TermId _Term) const;
+
+    /**
+     * @brief 添加日志
+    */
+    void append(const RaftLogEntry & _Log_entry);
+
+    /**
+     * @brief 从某处开始截断日志
+     * @param _Truncate_index 需要截断的索引
+    */
+    void truncate(LogIndex _Truncate_index);
+
+    /**
+     * @brief 获取指定索引之后的日志条目
+    */
+    std::vector<RaftLogEntry> getLogFrom(LogIndex _Index);
 
     /**
      * @brief 设置任期号
@@ -132,7 +159,12 @@ public:
     /**
      * @brief 设置投票目标节点
     */
-    void setVotedFor(NodeId node);
+    void setVotedFor(NodeId _Id);
+
+    /**
+     * @brief 设置 Leader ID
+    */
+    void setLeaderId(NodeId _Id);
 
     /**
      * @brief 设置最新提交日志的索引

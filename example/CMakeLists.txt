@@ -1,9 +1,32 @@
-file(GLOB_RECURSE RAFT_EXAMPLE_SOURCES "*.cpp")
+set(RAFT_EXAMPLE_SOURCES
+    src/raft_example.cpp
+)
 
 add_executable(raft_example ${RAFT_EXAMPLE_SOURCES})
 
+target_include_directories(raft_example PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 target_link_libraries(raft_example PRIVATE
     WW::raft
+)
+
+set(CLIENT_SOURCES
+    src/client_channel.cpp
+    src/raft_client.cpp
+    src/RaftOperation.pb.cc
+)
+
+add_executable(raft_client ${CLIENT_SOURCES})
+
+target_include_directories(raft_client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(raft_client PRIVATE
+    WW::raft
+    third-party
 )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.sh ${CMAKE_CURRENT_BINARY_DIR}/run.sh COPYONLY)

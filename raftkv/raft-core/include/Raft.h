@@ -65,6 +65,11 @@ public:
     */
     void clearInnerMessage();
 
+    /**
+     * @brief 获取 Raft 节点 ID
+    */
+    NodeId getId() const;
+
 private:
     /**
      * @brief 选举时间判断
@@ -115,6 +120,17 @@ private:
      * @brief 处理接收到的日志同步响应
     */
     void _HandleAppendEntriesResponse(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理接收到的操作请求
+    */
+    void _HandleOperationRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 应用已经提交的日志
+     * @param _Commit_index 需要应用到的日志索引
+    */
+    void _ApplyCommitedLogs();
 
     /**
      * @brief 随机生成超时时间

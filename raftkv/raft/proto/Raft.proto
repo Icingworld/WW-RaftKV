@@ -6,7 +6,7 @@ option cc_generic_services = true;
 
 // 日志条目
 message LogEntry {
-    int32 index = 1;                // 日志索引
+    int32 index = 1;                // 日志索引 unused
     int32 term = 2;                 // 日志任期
     bytes command = 3;              // 日志内容
 }

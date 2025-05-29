@@ -23,13 +23,13 @@ public:
     using level_type = int;
 
 protected:
-    _Skiplist<key_type, value_type> _Skiplist;      // 跳表
+    _Skiplist<key_type, value_type> _Skip_list;      // 跳表
 
 public:
     KVStore() = default;
 
     explicit KVStore(level_type _Max_level)
-        : _Skiplist(_Max_level)
+        : _Skip_list(_Max_level)
     {
     }
 
@@ -43,7 +43,7 @@ public:
      */
     const value_type & get(const key_type & _Key) noexcept
     {
-        return _Skiplist[_Key];
+        return _Skip_list[_Key];
     }
 
     /**
@@ -54,7 +54,7 @@ public:
      */
     bool put(const key_type & _Key, const value_type & _Value) noexcept
     {
-        auto pair = _Skiplist.insert(pair_type(_Key, _Value));
+        auto pair = _Skip_list.insert(pair_type(_Key, _Value));
         return pair.second;
     }
 
@@ -66,7 +66,7 @@ public:
      */
     bool update(const key_type & _Key, const value_type & _Value) noexcept
     {
-        _Skiplist[_Key] = _Value;
+        _Skip_list[_Key] = _Value;
         return true;
     }
 
@@ -77,7 +77,7 @@ public:
      */
     bool remove(const key_type & _Key) noexcept
     {
-        auto count = _Skiplist.erase(_Key);
+        auto count = _Skip_list.erase(_Key);
         return count != 0;
     }
 
@@ -88,7 +88,7 @@ public:
      */
     bool contains(const key_type & _Key) const noexcept
     {
-        return _Skiplist.contains(_Key);
+        return _Skip_list.contains(_Key);
     }
 
     /**
@@ -97,7 +97,7 @@ public:
      */
     bool empty() const noexcept
     {
-        return _Skiplist.empty();
+        return _Skip_list.empty();
     }
 
     /**
@@ -106,7 +106,7 @@ public:
      */
     size_type size() const noexcept
     {
-        return _Skiplist.size();
+        return _Skip_list.size();
     }
 };
 
