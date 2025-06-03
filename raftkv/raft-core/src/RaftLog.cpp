@@ -16,6 +16,11 @@ LogIndex RaftLog::getLastIndex() const
     return _Base_index + _Logs.size() - 1;
 }
 
+LogIndex RaftLog::getBaseIndex() const
+{
+    return _Base_index;
+}
+
 TermId RaftLog::getLastTerm() const
 {
     if (_Logs.empty()) {
@@ -63,7 +68,7 @@ void RaftLog::append(const RaftLogEntry & _Log_entry)
     _Logs.emplace_back(_Log_entry);
 }
 
-void RaftLog::truncate(LogIndex _Truncate_index)
+void RaftLog::truncateAfter(LogIndex _Truncate_index)
 {
     if (_Truncate_index < _Base_index || _Truncate_index > getLastIndex()) {
         // 不在范围内
@@ -72,6 +77,23 @@ void RaftLog::truncate(LogIndex _Truncate_index)
 
     // 通过 resize 丢弃指定范围日志
     _Logs.resize(_Truncate_index - _Base_index);
+}
+
+void RaftLog::truncateBefore(LogIndex _Truncate_index)
+{
+    if (_Truncate_index <= _Base_index || _Truncate_index > getLastIndex() + 1) {
+        // 不需要截断，或者超出日志范围
+        return;
+    }
+
+    // 计算截断的数量
+    size_t offset = _Truncate_index - _Base_index;
+
+    // 删除前 offset 条日志
+    _Logs.erase(_Logs.begin(), _Logs.begin() + offset);
+
+    // 更新 _Base_index
+    _Base_index = _Truncate_index;
 }
 
 std::vector<RaftLogEntry> RaftLog::getLogFrom(LogIndex _Index) const

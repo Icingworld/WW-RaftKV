@@ -55,6 +55,11 @@ LogIndex RaftNode::getLastIndex() const
     return _Logs.getLastIndex();
 }
 
+LogIndex RaftNode::getBaseIndex() const
+{
+    return _Logs.getBaseIndex();
+}
+
 TermId RaftNode::getLastTerm() const
 {
     return _Logs.getLastTerm();
@@ -95,9 +100,14 @@ void RaftNode::append(const RaftLogEntry & _Log_entry)
     _Logs.append(_Log_entry);
 }
 
-void RaftNode::truncate(LogIndex _Truncate_index)
+void RaftNode::truncateAfter(LogIndex _Truncate_index)
 {
-    _Logs.truncate(_Truncate_index);
+    _Logs.truncateAfter(_Truncate_index);
+}
+
+void RaftNode::truncateBefore(LogIndex _Truncate_index)
+{
+    _Logs.truncateBefore(_Truncate_index);
 }
 
 std::vector<RaftLogEntry> RaftNode::getLogFrom(LogIndex _Index)

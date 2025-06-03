@@ -21,6 +21,7 @@ public:
     using pair_type = std::pair<const _Ty_key, _Ty_value>;
     using size_type = std::size_t;
     using level_type = int;
+    using iterator = typename _Skiplist<key_type, value_type>::iterator;
 
 protected:
     _Skiplist<key_type, value_type> _Skip_list;      // 跳表
@@ -36,6 +37,16 @@ public:
     ~KVStore() = default;
 
 public:
+    iterator begin()
+    {
+        return _Skip_list.begin();
+    }
+
+    iterator end()
+    {
+        return _Skip_list.end();
+    }
+
     /**
      * @brief 获取值
      * @param _Key 键
@@ -98,6 +109,14 @@ public:
     bool empty() const noexcept
     {
         return _Skip_list.empty();
+    }
+
+    /**
+     * @brief 清空
+    */
+    void clear() noexcept
+    {
+        _Skip_list.clear();
     }
 
     /**

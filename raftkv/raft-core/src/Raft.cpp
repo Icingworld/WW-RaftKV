@@ -18,6 +18,7 @@ Raft::Raft(NodeId _Id, const std::vector<RaftPeer> _Peers)
     , _Election_interval(0)
     , _Heartbeat_interval(0)
     , _Vote_count(0)
+    , _Is_snapshoting(false)
     , _Inner_messages()
     , _Outter_messages()
 {
@@ -52,6 +53,9 @@ void Raft::step(const RaftMessage & _Message)
             break;
         case RaftMessage::MessageType::AppendEntriesResponse:
             _HandleAppendEntriesResponse(_Message);
+            break;
+        case RaftMessage::MessageType::ApplySnapShot:
+            _ApplySnapShot(_Message);
             break;
         case RaftMessage::MessageType::OperationRequest:
             _HandleOperationRequest(_Message);
@@ -242,7 +246,8 @@ void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
     // 3. 检查日志是否匹配
     if (!_LogUpToDate(other_last_log_index, other_last_log_term)) {
         // 日志不匹配，拒绝投票
-        DEBUG("log doesn't match, refuse to vote");
+        DEBUG("log (index:%d , term:%zu) doesn't match (index:%d, term:%zu), refuse to vote", 
+                other_last_log_index, other_last_log_term, _Node.getLastIndex(), _Node.getLastTerm());
         _Outter_messages = response;
         return;
     }
@@ -346,7 +351,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
         // 日志存在冲突，需要 Leader 进行回退
         DEBUG("log doesn't match, refuse append entries");
         // 截断该索引之后的所有日志
-        _Node.truncate(other_last_log_index);
+        _Node.truncateAfter(other_last_log_index);
         // 告知自己的索引位置，冲突情况下不使用
         response.index = _Node.getLastIndex();
         _Outter_messages = response;
@@ -374,6 +379,9 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
 
     // 应用日志
     _ApplyCommitedLogs();
+
+    // 检测是否需要压缩快照
+    _CheckIfNeedSnapShot();
 
     // 5. 响应成功
     // DEBUG("append entries success");       // too noisy
@@ -456,6 +464,9 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
 
         // 应用日志
         _ApplyCommitedLogs();
+
+        // 检查是否需要压缩成快照
+        _CheckIfNeedSnapShot();
     }
 }
 
@@ -491,6 +502,39 @@ void Raft::_HandleOperationRequest(const RaftMessage & _Message)
     _Outter_messages = message;
 }
 
+void Raft::_ApplySnapShot(const RaftMessage & _Message)
+{
+    // 读取上下文消息
+    NodeId id = _Message.from;
+    LogIndex index = _Message.index;
+    TermId log_term = _Message.log_term;
+    std::string snapshot = _Message.snapshot;
+
+    if (id == _Node.getId()) {
+        // 是自己创建快照，说明应用层已经创建/安装快照，直接开始截断
+        _Node.truncateBefore(index + 1);
+
+        // 确认状态
+        _Is_snapshoting = false;
+    } else {
+        // 是 Leader 发送的快照
+        if (index <= _Node.getLastAppliedIndex()) {
+            // 已经至少比快照更新了，拒绝安装
+            return;
+        }
+
+        // 同意应用快照
+        RaftMessage message;
+        message.type = RaftMessage::MessageType::ApplySnapShot;
+        message.from = _Node.getId();
+        message.index = index;
+        message.log_term = log_term;
+        message.command = snapshot;
+
+        _Inner_messages.emplace_back(message);
+    }
+}
+
 void Raft::_ApplyCommitedLogs()
 {
     // 构造一个上下文消息
@@ -508,6 +552,43 @@ void Raft::_ApplyCommitedLogs()
 
     // 传出上下文
     _Inner_messages.emplace_back(message);
+}
+
+void Raft::_TakeSnapShot()
+{
+    // 构造一个上下文消息
+    // 这里只是决定要创建快照
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::TakeSnapShot;
+    message.index = _Node.getLastAppliedIndex();
+    message.log_term = _Node.getTerm(message.index);
+
+    // 传出上下文
+    _Inner_messages.emplace_back(message);
+}
+
+void Raft::_CheckIfNeedSnapShot()
+{
+    if (_Is_snapshoting) {
+        return;
+    }
+
+    _Is_snapshoting = true;
+
+    // 设置日志阈值为 1000 条
+    // constexpr int MAX_LOG_SIZE = 1000;
+    constexpr int MAX_LOG_SIZE = 2;     // for test
+
+    LogIndex last_applied = _Node.getLastAppliedIndex();
+    LogIndex snapshot_index = _Node.getBaseIndex();
+
+    if (last_applied > snapshot_index && last_applied - snapshot_index >= MAX_LOG_SIZE) {
+        // 超出阈值，准备创建快照
+        _TakeSnapShot();
+        return;
+    }
+
+    _Is_snapshoting = false;
 }
 
 int Raft::_GetRandomTimeout(int _Timeout_min, int _Timeout_max) const

@@ -28,6 +28,9 @@ private:
     // 选举
     int _Vote_count;                            // 选举票数
 
+    // 快照
+    bool _Is_snapshoting;                       // 是否正在创建日志
+
     // 消息通道
     std::vector<RaftMessage> _Inner_messages;   // Raft 内部驱动产生的输出消息
     RaftMessage _Outter_messages;               // Raft 外部事件驱动产生的输出消息
@@ -127,10 +130,25 @@ private:
     void _HandleOperationRequest(const RaftMessage & _Message);
 
     /**
+     * @brief 应用快照
+    */
+    void _ApplySnapShot(const RaftMessage & _Message);
+
+    /**
      * @brief 应用已经提交的日志
      * @param _Commit_index 需要应用到的日志索引
     */
     void _ApplyCommitedLogs();
+
+    /**
+     * @brief 生成快照
+    */
+    void _TakeSnapShot();
+
+    /**
+     * @brief 检查是否需要生成快照
+    */
+    void _CheckIfNeedSnapShot();
 
     /**
      * @brief 随机生成超时时间

@@ -81,6 +81,11 @@ public:
     LogIndex getLastIndex() const;
 
     /**
+     * @brief 获取逻辑索引
+    */
+    LogIndex getBaseIndex() const;
+
+    /**
      * @brief 获取最新日志任期
     */
     TermId getLastTerm() const;
@@ -124,7 +129,13 @@ public:
      * @brief 从某处开始截断日志
      * @param _Truncate_index 需要截断的索引
     */
-    void truncate(LogIndex _Truncate_index);
+    void truncateAfter(LogIndex _Truncate_index);
+
+    /**
+     * @brief 截断某处前面的日志
+     * @param _Truncate_index 需要截断的索引
+    */
+    void truncateBefore(LogIndex _Truncate_index);
 
     /**
      * @brief 获取指定索引之后的日志条目

@@ -90,6 +90,16 @@ private:
     void _ApplyLogEntries(const RaftMessage & _Message);
 
     /**
+     * @brief 生成并保存快照
+    */
+    void _GenerateSnapShot(const RaftMessage & _Message);
+
+    /**
+     * @brief 安装快照
+    */
+    void _InstallSnapShot(const RaftMessage & _Message);
+
+    /**
      * @brief 处理 Rpc 收到的投票请求
     */
     void _HandleRequestVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response);
