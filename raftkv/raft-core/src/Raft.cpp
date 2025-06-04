@@ -173,6 +173,7 @@ void Raft::_SendAppendEntries(bool _IsHearbeat)
         // 找到该 peer 所持有的最新日志索引
         LogIndex prev_index = peer.getNextIndex() - 1;
         // 从日志中找到该索引对应的任期
+        // DEBUG("prev_index:%d, base_index:%d, last_index:%d", prev_index, _Node.getBaseIndex(), _Node.getLastIndex());
         TermId prev_term = _Node.getTerm(prev_index);
 
         heartbeat_request.index = prev_index;
@@ -316,7 +317,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     NodeId other_id = _Message.from;
     TermId other_term = _Message.term;
     LogIndex other_last_log_index = _Message.index;
-    LogIndex other_last_log_term = _Message.log_term;
+    TermId other_last_log_term = _Message.log_term;
     const std::vector<WW::RaftLogEntry> & other_entries = _Message.entries;
     LogIndex other_commit = _Message.commit;
 
@@ -349,7 +350,8 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     // 2. 检查日志是否匹配
     if (!_Node.match(other_last_log_index, other_last_log_term)) {
         // 日志存在冲突，需要 Leader 进行回退
-        DEBUG("log doesn't match, refuse append entries");
+        DEBUG("log (index:%d , term:%zu) doesn't match (index:%d, term:%zu), refuse append entries",
+                other_last_log_index, other_last_log_term, _Node.getLastIndex(), _Node.getLastTerm());
         // 截断该索引之后的所有日志
         _Node.truncateAfter(other_last_log_index);
         // 告知自己的索引位置，冲突情况下不使用
@@ -381,7 +383,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     _ApplyCommitedLogs();
 
     // 检测是否需要压缩快照
-    _CheckIfNeedSnapShot();
+    _CheckIfNeedSnapShot(_Node.getLastCommitIndex());
 
     // 5. 响应成功
     // DEBUG("append entries success");       // too noisy
@@ -466,7 +468,7 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
         _ApplyCommitedLogs();
 
         // 检查是否需要压缩成快照
-        _CheckIfNeedSnapShot();
+        _CheckIfNeedSnapShot(_Node.getLastCommitIndex());
     }
 }
 
@@ -567,22 +569,23 @@ void Raft::_TakeSnapShot()
     _Inner_messages.emplace_back(message);
 }
 
-void Raft::_CheckIfNeedSnapShot()
+void Raft::_CheckIfNeedSnapShot(LogIndex _Index)
 {
     if (_Is_snapshoting) {
         return;
     }
 
+    // DEBUG("check snapshot index:%d", _Index);
+
     _Is_snapshoting = true;
 
     // 设置日志阈值为 1000 条
     // constexpr int MAX_LOG_SIZE = 1000;
-    constexpr int MAX_LOG_SIZE = 2;     // for test
+    constexpr int MAX_LOG_SIZE = 3;     // for test
 
-    LogIndex last_applied = _Node.getLastAppliedIndex();
     LogIndex snapshot_index = _Node.getBaseIndex();
 
-    if (last_applied > snapshot_index && last_applied - snapshot_index >= MAX_LOG_SIZE) {
+    if (_Index > snapshot_index && _Index - snapshot_index >= MAX_LOG_SIZE) {
         // 超出阈值，准备创建快照
         _TakeSnapShot();
         return;

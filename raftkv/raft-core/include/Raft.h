@@ -147,8 +147,9 @@ private:
 
     /**
      * @brief 检查是否需要生成快照
+     * @param _Index
     */
-    void _CheckIfNeedSnapShot();
+    void _CheckIfNeedSnapShot(LogIndex _Index);
 
     /**
      * @brief 随机生成超时时间

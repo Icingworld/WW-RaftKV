@@ -15,6 +15,8 @@ class RaftLog
 private:
     std::vector<RaftLogEntry> _Logs;    // 日志数组
     LogIndex _Base_index;               // 第一条日志的逻辑索引
+    LogIndex _SnapShot_index;           // 快照截断的最后一条日志索引
+    TermId _SnapShot_term;              // 快照截断的最后一条日志任期
 
 public:
     RaftLog();

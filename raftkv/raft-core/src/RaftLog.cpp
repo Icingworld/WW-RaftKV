@@ -1,6 +1,7 @@
 #include "RaftLog.h"
 
 #include <stdexcept>
+#include <iostream>
 
 namespace WW
 {
@@ -8,6 +9,8 @@ namespace WW
 RaftLog::RaftLog()
     : _Logs()
     , _Base_index(1)
+    , _SnapShot_index(1)
+    , _SnapShot_term(0)
 {
 }
 
@@ -24,7 +27,7 @@ LogIndex RaftLog::getBaseIndex() const
 TermId RaftLog::getLastTerm() const
 {
     if (_Logs.empty()) {
-        return 0;
+        return _SnapShot_term;
     }
 
     return _Logs.back().getTerm();
@@ -33,6 +36,10 @@ TermId RaftLog::getLastTerm() const
 TermId RaftLog::getTerm(LogIndex _Index) const
 {
     if (_Index < _Base_index || _Index > getLastIndex()) {
+        if (_Index == _SnapShot_index) {
+            return _SnapShot_term;
+        }
+
         return 0;
     }
 
@@ -53,6 +60,10 @@ bool RaftLog::match(LogIndex _Index, TermId _Term) const
     if (_Index == 0) {
         // 空日志
         return true;
+    }
+
+    if (_Index == _SnapShot_index) {
+        return _SnapShot_term == _Term;
     }
 
     if (_Index < _Base_index || _Index > getLastIndex()) {
@@ -90,10 +101,15 @@ void RaftLog::truncateBefore(LogIndex _Truncate_index)
     size_t offset = _Truncate_index - _Base_index;
 
     // 删除前 offset 条日志
-    _Logs.erase(_Logs.begin(), _Logs.begin() + offset);
+    if (offset > 0) {
+        // 更新 snapshot term/index 为截断前最后一条日志
+        _SnapShot_index = _Truncate_index - 1;
+        _SnapShot_term = getTerm(_SnapShot_index);
+        printf("snapshot index:%d, snapshot term:%zu\n", _SnapShot_index, _SnapShot_term);
 
-    // 更新 _Base_index
-    _Base_index = _Truncate_index;
+        _Logs.erase(_Logs.begin(), _Logs.begin() + offset);
+        _Base_index = _Truncate_index;
+    }
 }
 
 std::vector<RaftLogEntry> RaftLog::getLogFrom(LogIndex _Index) const

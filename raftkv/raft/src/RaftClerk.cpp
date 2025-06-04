@@ -281,7 +281,7 @@ void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest & _Request, R
     TermId other_term = _Request.term();
     NodeId other_id = _Request.candidate_id();
     LogIndex other_last_log_index = _Request.last_log_index();
-    LogIndex other_last_log_term = _Request.last_log_term();
+    TermId other_last_log_term = _Request.last_log_term();
 
     // 构造消息
     RaftMessage message;
