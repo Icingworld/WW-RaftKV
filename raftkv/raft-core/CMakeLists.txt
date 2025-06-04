@@ -1,4 +1,4 @@
-file(GLOB_RECURSE RAFT_CORE_SOURCES "*.cpp")
+file(GLOB_RECURSE RAFT_CORE_SOURCES "*.cpp" "*.cc")
 
 add_library(raft-core STATIC ${RAFT_CORE_SOURCES})
 

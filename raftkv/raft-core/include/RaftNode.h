@@ -91,6 +91,16 @@ public:
     TermId getLastTerm() const;
 
     /**
+     * @brief 获取快照索引
+    */
+    LogIndex getSnapShotIndex() const;
+
+    /**
+     * @brief 获取快照任期
+    */
+    TermId getSnapShotTerm() const;
+
+    /**
      * @brief 获取指定索引的日志
     */
     const RaftLogEntry & getLog(LogIndex _Index) const;
@@ -186,6 +196,16 @@ public:
      * @brief 设置最新应用日志的索引
     */
     void setLastAppliedIndex(LogIndex _Last_applied_index);
+
+    /**
+     * @brief 设置快照索引
+    */
+    void setSnapShotIndex(LogIndex _SnapShot_index);
+
+    /**
+     * @brief 设置快照任期
+    */
+    void setSnapShotTerm(TermId _SnapShot_term);
 };
 
 } // namespace WW

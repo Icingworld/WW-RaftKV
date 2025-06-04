@@ -46,6 +46,16 @@ TermId RaftLog::getTerm(LogIndex _Index) const
     return _Logs.at(_Index - _Base_index).getTerm();
 }
 
+LogIndex RaftLog::getSnapShotIndex() const
+{
+    return _SnapShot_index;
+}
+
+TermId RaftLog::getSnapShotTerm() const
+{
+    return _SnapShot_term;
+}
+
 const RaftLogEntry & RaftLog::at(LogIndex _Index) const
 {
     if (_Index < _Base_index || _Index > getLastIndex()) {
@@ -122,6 +132,17 @@ std::vector<RaftLogEntry> RaftLog::getLogFrom(LogIndex _Index) const
 
     tmp.assign(_Logs.begin() + _Index - _Base_index, _Logs.end());
     return tmp;
+}
+
+void RaftLog::setSnapShotIndex(LogIndex _SnapShot_index)
+{
+    this->_SnapShot_index = _SnapShot_index;
+    _Base_index = _SnapShot_index;
+}
+
+void RaftLog::setSnapShotTerm(TermId _SnapShot_term)
+{
+    this->_SnapShot_term = _SnapShot_term;
 }
 
 } // namespace WW

@@ -65,6 +65,11 @@ public:
 
 private:
     /**
+     * @brief 从持久化文件中安装快照
+    */
+    void _InstallSnapShotFromPersist();
+
+    /**
      * @brief 客户端定时器线程
     */
     void _ClientWorking();

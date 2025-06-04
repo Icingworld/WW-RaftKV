@@ -65,6 +65,16 @@ TermId RaftNode::getLastTerm() const
     return _Logs.getLastTerm();
 }
 
+LogIndex RaftNode::getSnapShotIndex() const
+{
+    return _Logs.getSnapShotIndex();
+}
+
+TermId RaftNode::getSnapShotTerm() const
+{
+    return _Logs.getSnapShotTerm();
+}
+
 const RaftLogEntry & RaftNode::getLog(LogIndex _Index) const
 {
     return _Logs.at(_Index);
@@ -158,6 +168,16 @@ void RaftNode::setLastCommitIndex(LogIndex _Last_commit_index)
 void RaftNode::setLastAppliedIndex(LogIndex _Last_applied_index)
 {
     this->_Last_applied_index = _Last_applied_index;
+}
+
+void RaftNode::setSnapShotIndex(LogIndex _SnapShot_index)
+{
+    _Logs.setSnapShotIndex(_SnapShot_index);
+}
+
+void RaftNode::setSnapShotTerm(TermId _SnapShot_term)
+{
+    _Logs.setSnapShotTerm(_SnapShot_term);
 }
 
 } // namespace WW
