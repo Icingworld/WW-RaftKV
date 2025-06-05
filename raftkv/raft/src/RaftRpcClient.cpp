@@ -38,6 +38,15 @@ void RaftRpcClient::AppendEntries(const AppendEntriesRequest & _Request, NodeId 
     _Stub->AppendEntries(nullptr, &_Request, response, closure);
 }
 
+void RaftRpcClient::InstallSnapshot(const InstallSnapshotRequest & _Request, NodeId _To, std::function<void(NodeId, const InstallSnapshotResponse &)> _Callback)
+{
+    InstallSnapshotResponse * response = new InstallSnapshotResponse();
+    RaftRpcClosure<InstallSnapshotResponse> * closure = new RaftRpcClosure<InstallSnapshotResponse>(response, [_To, _Callback](const InstallSnapshotResponse & _Response) {
+        _Callback(_To, _Response);
+    });
+    _Stub->InstallSnapshot(nullptr, &_Request, response, closure);
+}
+
 void RaftRpcClient::connect()
 {
     _Channel->connect();

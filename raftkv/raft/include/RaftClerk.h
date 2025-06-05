@@ -67,7 +67,7 @@ private:
     /**
      * @brief 从持久化文件中安装快照
     */
-    void _InstallSnapShotFromPersist();
+    void _InstallSnapshotFromPersist();
 
     /**
      * @brief 客户端定时器线程
@@ -80,14 +80,19 @@ private:
     void _HandleRaftMessageOut(const RaftMessage & _Message);
 
     /**
-     * @brief 处理发送投票请求的消息
+     * @brief 发送投票请求的消息
     */
     void _SendRequestVoteRequest(const RaftMessage & _Message);
 
     /**
-     * @brief 处理发送日志同步请求的消息
+     * @brief 发送日志同步请求的消息
     */
     void _SendAppendEntriesRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 发送快照安装请求的消息
+    */
+    void _SendInstallSnapshotRequest(const RaftMessage & _Message);
 
     /**
      * @brief 处理应用日志的消息
@@ -97,12 +102,12 @@ private:
     /**
      * @brief 生成并保存快照
     */
-    void _GenerateSnapShot(const RaftMessage & _Message);
+    void _GenerateSnapshot(const RaftMessage & _Message);
 
     /**
      * @brief 安装快照
     */
-    void _InstallSnapShot(const RaftMessage & _Message);
+    void _InstallSnapshot(const RaftMessage & _Message);
 
     /**
      * @brief 处理 Rpc 收到的投票请求
@@ -123,6 +128,16 @@ private:
      * @brief 处理 Rpc 收到的日志同步响应
     */
     void _HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse & _Response);
+
+    /**
+     * @brief 处理 Rpc 收到的安装快照请求
+    */
+    void _HandleInstallSnapshotRequest(const InstallSnapshotRequest & _Request, InstallSnapshotResponse & _Response);
+
+    /**
+     * @brief 处理 Rpc 收到的安装快照响应
+    */
+    void _HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse & _Response);
 
     /**
      * @brief 解析并执行命令

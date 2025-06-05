@@ -2,13 +2,13 @@ syntax = "proto3";
 
 package WW;
 
-message SnapShotEntry {
+message SnapshotEntry {
     string key = 1;                     // 键
     string value = 2;                   // 值
 }
 
-message SnapShotData {
+message SnapshotData {
     int32 last_applied_log_index = 1;   // 最后应用日志索引
     int32 last_applied_log_term = 2;    // 最后应用日志任期
-    repeated SnapShotEntry kvs = 3;     // 键值对
+    repeated SnapshotEntry kvs = 3;     // 键值对
 }

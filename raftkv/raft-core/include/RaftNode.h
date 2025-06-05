@@ -93,12 +93,12 @@ public:
     /**
      * @brief 获取快照索引
     */
-    LogIndex getSnapShotIndex() const;
+    LogIndex getSnapshotIndex() const;
 
     /**
      * @brief 获取快照任期
     */
-    TermId getSnapShotTerm() const;
+    TermId getSnapshotTerm() const;
 
     /**
      * @brief 获取指定索引的日志
@@ -200,12 +200,12 @@ public:
     /**
      * @brief 设置快照索引
     */
-    void setSnapShotIndex(LogIndex _SnapShot_index);
+    void setSnapshotIndex(LogIndex _Snapshot_index);
 
     /**
      * @brief 设置快照任期
     */
-    void setSnapShotTerm(TermId _SnapShot_term);
+    void setSnapshotTerm(TermId _Snapshot_term);
 };
 
 } // namespace WW

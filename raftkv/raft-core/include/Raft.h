@@ -133,6 +133,16 @@ private:
     void _HandleAppendEntriesResponse(const RaftMessage & _Message);
 
     /**
+     * @brief 处理接收到的快照安装请求
+    */
+    void _HandleInstallSnapshotRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理接收到的快照安装响应
+    */
+    void _HandleInstallSnapshotResponse(const RaftMessage & _Message);
+
+    /**
      * @brief 处理接收到的操作请求
     */
     void _HandleOperationRequest(const RaftMessage & _Message);
@@ -140,7 +150,7 @@ private:
     /**
      * @brief 应用快照
     */
-    void _ApplySnapShot(const RaftMessage & _Message);
+    void _ApplySnapshot(const RaftMessage & _Message);
 
     /**
      * @brief 应用已经提交的日志
@@ -151,13 +161,13 @@ private:
     /**
      * @brief 生成快照
     */
-    void _TakeSnapShot();
+    void _TakeSnapshot();
 
     /**
      * @brief 检查是否需要生成快照
      * @param _Index
     */
-    void _CheckIfNeedSnapShot(LogIndex _Index);
+    void _CheckIfNeedSnapshot(LogIndex _Index);
 
     /**
      * @brief 随机生成超时时间

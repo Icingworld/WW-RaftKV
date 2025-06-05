@@ -15,8 +15,8 @@ class RaftLog
 private:
     std::vector<RaftLogEntry> _Logs;    // 日志数组
     LogIndex _Base_index;               // 第一条日志的逻辑索引
-    LogIndex _SnapShot_index;           // 快照截断的最后一条日志索引
-    TermId _SnapShot_term;              // 快照截断的最后一条日志任期
+    LogIndex _Snapshot_index;           // 快照截断的最后一条日志索引
+    TermId _Snapshot_term;              // 快照截断的最后一条日志任期
 
 public:
     RaftLog();
@@ -47,12 +47,12 @@ public:
     /**
      * @brief 获取快照索引
     */
-    LogIndex getSnapShotIndex() const;
+    LogIndex getSnapshotIndex() const;
 
     /**
      * @brief 获取快照任期
     */
-    TermId getSnapShotTerm() const;
+    TermId getSnapshotTerm() const;
 
     /**
      * @brief 获取指定索引的日志
@@ -90,12 +90,12 @@ public:
     /**
      * @brief 设置快照索引
     */
-    void setSnapShotIndex(LogIndex _SnapShot_index);
+    void setSnapshotIndex(LogIndex _Snapshot_index);
 
     /**
      * @brief 设置快照任期
     */
-    void setSnapShotTerm(TermId _SnapShot_term);
+    void setSnapshotTerm(TermId _Snapshot_term);
 };
 
 } // namespace WW
