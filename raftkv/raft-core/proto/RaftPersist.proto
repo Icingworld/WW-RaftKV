@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package WW;
+
+message PersistLogEntry {
+    int32 term = 2;                 // 日志任期
+    bytes command = 3;              // 日志内容
+}
+
+message PersistData {
+    // 常规
+    int32 term = 1;                 // 当前节点任期
+    int32 voted_for = 2;            // 向哪个节点投了票
+    repeated PersistLogEntry entries = 3;  // 没有被快照压缩的日志
+
+    // 快照
+    int32 snapshot_index = 4;       // 快照最后一条日志索引
+    int32 snapshot_term = 5;        // 快照最后一条日志任期
+}

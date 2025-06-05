@@ -28,6 +28,12 @@ private:
     // 选举
     int _Vote_count;                            // 选举票数
 
+    // 快照
+    bool _Is_snapshoting;                       // 是否正在创建日志
+
+    // 持久化
+    bool _Is_dirty;                             // 数据是否发生变化
+
     // 消息通道
     std::vector<RaftMessage> _Inner_messages;   // Raft 内部驱动产生的输出消息
     RaftMessage _Outter_messages;               // Raft 外部事件驱动产生的输出消息
@@ -38,6 +44,11 @@ public:
     ~Raft() = default;
 
 public:
+    /**
+     * @brief 加载 Raft 持久化文件
+    */
+    bool load();
+
     /**
      * @brief 时钟推进
      * @param _Delta_time 推进时间
@@ -122,15 +133,41 @@ private:
     void _HandleAppendEntriesResponse(const RaftMessage & _Message);
 
     /**
+     * @brief 处理接收到的快照安装请求
+    */
+    void _HandleInstallSnapshotRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理接收到的快照安装响应
+    */
+    void _HandleInstallSnapshotResponse(const RaftMessage & _Message);
+
+    /**
      * @brief 处理接收到的操作请求
     */
     void _HandleOperationRequest(const RaftMessage & _Message);
+
+    /**
+     * @brief 应用快照
+    */
+    void _ApplySnapshot(const RaftMessage & _Message);
 
     /**
      * @brief 应用已经提交的日志
      * @param _Commit_index 需要应用到的日志索引
     */
     void _ApplyCommitedLogs();
+
+    /**
+     * @brief 生成快照
+    */
+    void _TakeSnapshot();
+
+    /**
+     * @brief 检查是否需要生成快照
+     * @param _Index
+    */
+    void _CheckIfNeedSnapshot(LogIndex _Index);
 
     /**
      * @brief 随机生成超时时间
@@ -144,6 +181,11 @@ private:
      * @brief 判断最新日志是否匹配
     */
     bool _LogUpToDate(LogIndex _Last_index, TermId _Last_term);
+
+    /**
+     * @brief 持久化 Raft 状态
+    */
+    void _Persist();
 };
 
 } // namespace WW

@@ -55,9 +55,24 @@ LogIndex RaftNode::getLastIndex() const
     return _Logs.getLastIndex();
 }
 
+LogIndex RaftNode::getBaseIndex() const
+{
+    return _Logs.getBaseIndex();
+}
+
 TermId RaftNode::getLastTerm() const
 {
     return _Logs.getLastTerm();
+}
+
+LogIndex RaftNode::getSnapshotIndex() const
+{
+    return _Logs.getSnapshotIndex();
+}
+
+TermId RaftNode::getSnapshotTerm() const
+{
+    return _Logs.getSnapshotTerm();
 }
 
 const RaftLogEntry & RaftNode::getLog(LogIndex _Index) const
@@ -95,9 +110,14 @@ void RaftNode::append(const RaftLogEntry & _Log_entry)
     _Logs.append(_Log_entry);
 }
 
-void RaftNode::truncate(LogIndex _Truncate_index)
+void RaftNode::truncateAfter(LogIndex _Truncate_index)
 {
-    _Logs.truncate(_Truncate_index);
+    _Logs.truncateAfter(_Truncate_index);
+}
+
+void RaftNode::truncateBefore(LogIndex _Truncate_index)
+{
+    _Logs.truncateBefore(_Truncate_index);
 }
 
 std::vector<RaftLogEntry> RaftNode::getLogFrom(LogIndex _Index)
@@ -148,6 +168,16 @@ void RaftNode::setLastCommitIndex(LogIndex _Last_commit_index)
 void RaftNode::setLastAppliedIndex(LogIndex _Last_applied_index)
 {
     this->_Last_applied_index = _Last_applied_index;
+}
+
+void RaftNode::setSnapshotIndex(LogIndex _Snapshot_index)
+{
+    _Logs.setSnapshotIndex(_Snapshot_index);
+}
+
+void RaftNode::setSnapshotTerm(TermId _Snapshot_term)
+{
+    _Logs.setSnapshotTerm(_Snapshot_term);
 }
 
 } // namespace WW

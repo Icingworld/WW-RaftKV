@@ -81,9 +81,24 @@ public:
     LogIndex getLastIndex() const;
 
     /**
+     * @brief 获取逻辑索引
+    */
+    LogIndex getBaseIndex() const;
+
+    /**
      * @brief 获取最新日志任期
     */
     TermId getLastTerm() const;
+
+    /**
+     * @brief 获取快照索引
+    */
+    LogIndex getSnapshotIndex() const;
+
+    /**
+     * @brief 获取快照任期
+    */
+    TermId getSnapshotTerm() const;
 
     /**
      * @brief 获取指定索引的日志
@@ -124,7 +139,13 @@ public:
      * @brief 从某处开始截断日志
      * @param _Truncate_index 需要截断的索引
     */
-    void truncate(LogIndex _Truncate_index);
+    void truncateAfter(LogIndex _Truncate_index);
+
+    /**
+     * @brief 截断某处前面的日志
+     * @param _Truncate_index 需要截断的索引
+    */
+    void truncateBefore(LogIndex _Truncate_index);
 
     /**
      * @brief 获取指定索引之后的日志条目
@@ -175,6 +196,16 @@ public:
      * @brief 设置最新应用日志的索引
     */
     void setLastAppliedIndex(LogIndex _Last_applied_index);
+
+    /**
+     * @brief 设置快照索引
+    */
+    void setSnapshotIndex(LogIndex _Snapshot_index);
+
+    /**
+     * @brief 设置快照任期
+    */
+    void setSnapshotTerm(TermId _Snapshot_term);
 };
 
 } // namespace WW

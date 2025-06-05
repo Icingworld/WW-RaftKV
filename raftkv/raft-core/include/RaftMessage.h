@@ -19,10 +19,13 @@ public:
         AppendEntriesResponse,              // 收到同步日志响应
         RequestVoteRequest,                 // Raft 发起选举，需要发送投票请求
         RequestVoteResponse,                // 收到投票响应
+        InstallSnapshotRequest,             // Leader 向 Follower 发送安装快照请求
+        InstallSnapshotResponse,            // 收到安装快照响应
+        TakeSnapshot,                       // 生成快照
+        ApplySnapshot,                      // 应用快照
         LogEntriesApply,                    // 应用日志到状态机
         OperationRequest,                   // 收到操作请求
-        OPerationResponse,                  // 操作响应
-        TBD                                 // To be designed
+        OPerationResponse                   // 操作响应
     };
 
     enum class OperationType
@@ -43,9 +46,10 @@ public:
     LogIndex commit;                        // 提交日志索引
     std::vector<RaftLogEntry> entries;      // 日志条目数组
     bool reject;                            // 是否拒绝
-        
+
     OperationType op_type;                  // 操作类型
     std::string command;                    // 操作命令
+    std::string snapshot;                   // 快照内容
 };
 
 } // namespace WW

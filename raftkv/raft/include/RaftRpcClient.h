@@ -40,6 +40,13 @@ public:
     void AppendEntries(const AppendEntriesRequest & _Request, NodeId _To, std::function<void(NodeId, const AppendEntriesResponse &)> _Callback);
 
     /**
+     * @brief 发起安装快照请求
+     * @param request 请求消息体
+     * @param callback 回调函数
+    */
+    void InstallSnapshot(const InstallSnapshotRequest & _Request, NodeId _To, std::function<void(NodeId, const InstallSnapshotResponse &)> _Callback);
+
+    /**
      * @brief 连接 Raft 服务端
     */
     void connect();

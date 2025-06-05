@@ -2,8 +2,10 @@
 
 #include <random>
 #include <algorithm>
+#include <fstream>
 
 #include <RaftLogger.h>
+#include <RaftPersist.pb.h>
 
 namespace WW
 {
@@ -18,6 +20,8 @@ Raft::Raft(NodeId _Id, const std::vector<RaftPeer> _Peers)
     , _Election_interval(0)
     , _Heartbeat_interval(0)
     , _Vote_count(0)
+    , _Is_snapshoting(false)
+    , _Is_dirty(false)
     , _Inner_messages()
     , _Outter_messages()
 {
@@ -52,6 +56,15 @@ void Raft::step(const RaftMessage & _Message)
             break;
         case RaftMessage::MessageType::AppendEntriesResponse:
             _HandleAppendEntriesResponse(_Message);
+            break;
+        case RaftMessage::MessageType::InstallSnapshotRequest:
+            _HandleInstallSnapshotRequest(_Message);
+            break;
+        case RaftMessage::MessageType::InstallSnapshotResponse:
+            _HandleInstallSnapshotResponse(_Message);
+            break;
+        case RaftMessage::MessageType::ApplySnapshot:
+            _ApplySnapshot(_Message);
             break;
         case RaftMessage::MessageType::OperationRequest:
             _HandleOperationRequest(_Message);
@@ -109,6 +122,10 @@ void Raft::_StartElection()
     _Node.setTerm(_Node.getTerm() + 1);
     _Vote_count = 1;
 
+    // 持久化
+    _Is_dirty = true;
+    _Persist();
+
     // 投票请求所需的数据
     NodeId this_id = _Node.getId();
     TermId this_term = _Node.getTerm();
@@ -159,20 +176,29 @@ void Raft::_SendAppendEntries(bool _IsHearbeat)
         heartbeat_request.to = peer.getId();
         heartbeat_request.term = this_term;
         heartbeat_request.commit = this_commit;
-        
-        if (!_IsHearbeat) {
-            // 添加日志条目
-            // 从该 Follower 的 nextIndex 开始添加日志
-            heartbeat_request.entries = _Node.getLogFrom(peer.getNextIndex());
-        }
 
         // 找到该 peer 所持有的最新日志索引
         LogIndex prev_index = peer.getNextIndex() - 1;
         // 从日志中找到该索引对应的任期
+        // DEBUG("prev_index:%d, base_index:%d, last_index:%d", prev_index, _Node.getBaseIndex(), _Node.getLastIndex());
         TermId prev_term = _Node.getTerm(prev_index);
 
-        heartbeat_request.index = prev_index;
-        heartbeat_request.log_term = prev_term;
+        if (prev_term == 0) {
+            // 无论是心跳还是同步，都可以改为快照发送
+            // 该位置可能非法或处于快照的范围内，改为发送 InstallSnapshot
+            heartbeat_request.type = RaftMessage::MessageType::InstallSnapshotRequest;
+            heartbeat_request.index = _Node.getSnapshotIndex();
+            heartbeat_request.log_term = _Node.getSnapshotTerm();
+        } else {
+            heartbeat_request.index = prev_index;
+            heartbeat_request.log_term = prev_term;
+
+            if (!_IsHearbeat) {
+                // 添加日志条目
+                // 从该 Follower 的 nextIndex 开始添加日志
+                heartbeat_request.entries = _Node.getLogFrom(peer.getNextIndex());
+            }
+        }
 
         _Inner_messages.emplace_back(heartbeat_request);
     }
@@ -229,6 +255,8 @@ void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
         _Node.setVotedFor(-1);
         // 更新响应
         response.term = other_term;
+
+        _Is_dirty = true;
     }
 
     // 2. 检查自己是否已经投过票
@@ -236,13 +264,16 @@ void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
         // 已经投过票且不是该节点，拒绝投票
         DEBUG("already voted for node: %d, refuse to vote", _Node.getVotedFor());
         _Outter_messages = response;
+
+        // 这里不需要持久化，如果是刚刚退选的，则一定可以投票，如果早就是 Follower，则之前就持久化过了
         return;
     }
 
     // 3. 检查日志是否匹配
     if (!_LogUpToDate(other_last_log_index, other_last_log_term)) {
         // 日志不匹配，拒绝投票
-        DEBUG("log doesn't match, refuse to vote");
+        DEBUG("log (index:%d , term:%zu) doesn't match (index:%d, term:%zu), refuse to vote", 
+                other_last_log_index, other_last_log_term, _Node.getLastIndex(), _Node.getLastTerm());
         _Outter_messages = response;
         return;
     }
@@ -251,6 +282,10 @@ void Raft::_HandleRequestVoteRequest(const RaftMessage & _Message)
     DEBUG("approve, vote for it");
     _Node.setVotedFor(response.to);
     response.reject = false;
+
+    // 持久化
+    _Is_dirty = true;
+    _Persist();
 
     _Outter_messages = response;
 }
@@ -274,6 +309,11 @@ void Raft::_HandleRequestVoteResponse(const RaftMessage & _Message)
         _ResetElectionTimeout();
         _Node.setTerm(other_term);
         _Node.setVotedFor(-1);
+
+        // 持久化
+        _Is_dirty = true;
+        _Persist();
+
         return;
     }
 
@@ -287,6 +327,11 @@ void Raft::_HandleRequestVoteResponse(const RaftMessage & _Message)
             // 超过半数，胜选
             DEBUG("win the election, switch to leader");
             _Node.switchToLeader();
+            _Node.setVotedFor(-1);
+
+            // 持久化
+            _Is_dirty = true;
+            _Persist();
 
             // Leader 需要初始化 peer 的两个索引
             for (RaftPeer & peer : _Peers) {
@@ -311,7 +356,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     NodeId other_id = _Message.from;
     TermId other_term = _Message.term;
     LogIndex other_last_log_index = _Message.index;
-    LogIndex other_last_log_term = _Message.log_term;
+    TermId other_last_log_term = _Message.log_term;
     const std::vector<WW::RaftLogEntry> & other_entries = _Message.entries;
     LogIndex other_commit = _Message.commit;
 
@@ -339,17 +384,25 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
         _Node.setTerm(other_term);
         _Node.setVotedFor(-1);
         response.term = other_term;
+
+        _Is_dirty = true;
     }
 
     // 2. 检查日志是否匹配
     if (!_Node.match(other_last_log_index, other_last_log_term)) {
         // 日志存在冲突，需要 Leader 进行回退
-        DEBUG("log doesn't match, refuse append entries");
+        DEBUG("log (index:%d , term:%zu) doesn't match (index:%d, term:%zu), refuse append entries",
+                other_last_log_index, other_last_log_term, _Node.getLastIndex(), _Node.getLastTerm());
         // 截断该索引之后的所有日志
-        _Node.truncate(other_last_log_index);
+        _Node.truncateAfter(other_last_log_index);
         // 告知自己的索引位置，冲突情况下不使用
         response.index = _Node.getLastIndex();
         _Outter_messages = response;
+
+        // 持久化
+        _Is_dirty = true;
+        _Persist();
+
         return;
     }
 
@@ -370,10 +423,15 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
             DEBUG("term: %zu, command: %s", entry.getTerm(), entry.getCommand().c_str());
             _Node.append(entry);
         }
+
+        _Is_dirty = true;
     }
 
     // 应用日志
     _ApplyCommitedLogs();
+
+    // 检测是否需要压缩快照
+    _CheckIfNeedSnapshot(_Node.getLastCommitIndex());
 
     // 5. 响应成功
     // DEBUG("append entries success");       // too noisy
@@ -385,6 +443,9 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     response.reject = false;
 
     _Outter_messages = response;
+
+    // 持久化
+    _Persist();
 }
 
 void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
@@ -407,6 +468,10 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
         _ResetElectionTimeout();
         _Node.setTerm(other_term);
         _Node.setVotedFor(-1);
+
+        // 持久化
+        _Is_dirty = true;
+        _Persist();
         return;
     }
 
@@ -456,7 +521,114 @@ void Raft::_HandleAppendEntriesResponse(const RaftMessage & _Message)
 
         // 应用日志
         _ApplyCommitedLogs();
+
+        // 检查是否需要压缩成快照
+        _CheckIfNeedSnapshot(_Node.getLastCommitIndex());
     }
+}
+
+void Raft::_HandleInstallSnapshotRequest(const RaftMessage & _Message)
+{
+    // 取出上下文信息
+    TermId other_term = _Message.term;
+    NodeId other_id = _Message.from;
+    LogIndex other_last_include_index = _Message.index;
+    TermId other_last_include_term = _Message.log_term;
+    std::string other_snapshot = _Message.snapshot;
+
+    // 构造并设置响应
+    RaftMessage response;
+    response.type = RaftMessage::MessageType::InstallSnapshotResponse;
+
+    // 1. 比较任期
+    if (other_term < _Node.getTerm()) {
+        // 任期不如自己，拒绝
+        DEBUG("term: %zu less than self: %zu, refuse install snapshot", other_term, response.term);
+        response.term = _Node.getTerm();
+        _Outter_messages = response;
+        return;
+    }
+
+    if (other_term > _Node.getTerm()) {
+        // 任期比自己高，转变为 Follower
+        DEBUG("term: %zu larger than self: %zu, switch to Follower", other_term, response.term);
+        _Node.switchToFollower();
+        _ResetElectionTimeout();
+        _Node.setTerm(other_term);
+        _Node.setVotedFor(-1);
+        response.term = other_term;
+
+        _Is_dirty = true;
+    }
+
+    // 2. 比较快照新旧
+    if (other_last_include_index < _Node.getSnapshotIndex()) {
+        // 快照比自己的快照更旧，忽略，或许这里可以认为 Leader 过时了，准备发起选举
+        DEBUG("snapshot older than self, ignore");
+        response.term = _Node.getTerm();
+        _Outter_messages = response;
+        return;
+    }
+
+    // 重置选举时间
+    _ResetElectionTimeout();
+
+    // 3. 准备安装快照
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::ApplySnapshot;
+    message.index = other_last_include_index;
+    message.log_term = other_last_include_term;
+    message.snapshot = other_snapshot;
+
+    _Inner_messages.emplace_back(message);
+
+    // 传出响应
+    _Outter_messages = response;
+}
+
+void Raft::_HandleInstallSnapshotResponse(const RaftMessage & _Message)
+{
+    // 取出上下文信息
+    NodeId other_id = _Message.from;
+    TermId other_term = _Message.term;
+
+    // 1. 比较任期
+    if (other_term > _Node.getTerm()) {
+        // 任期不如其他节点，退位
+        _Node.switchToFollower();
+        _ResetElectionTimeout();
+        _Node.setTerm(other_term);
+        _Node.setVotedFor(-1);
+
+        // 持久化
+        _Is_dirty = true;
+        _Persist();
+        return;
+    }
+
+    if (other_term < _Node.getTerm()) {
+        // 过期消息，忽略
+        return;
+    }
+
+    // 找到对应的 peer
+    auto it = _Peers.begin();
+    for (; it != _Peers.end(); ++it) {
+        if (it->getId() == other_id) {
+            break;
+        }
+    }
+
+    if (it == _Peers.end()) {
+        // 没找到这个节点
+        return;
+    }
+
+    RaftPeer & other_node = *it;
+
+    // 2. 更新节点索引
+    other_node.setNextIndex(_Node.getSnapshotIndex() + 1);
+    other_node.setMatchIndex(_Node.getSnapshotIndex());
 }
 
 void Raft::_HandleOperationRequest(const RaftMessage & _Message)
@@ -486,9 +658,35 @@ void Raft::_HandleOperationRequest(const RaftMessage & _Message)
 
         // 发送日志同步请求
         _SendAppendEntries(false);
+
+        // 持久化
+        _Is_dirty = true;
+        _Persist();
     }
 
     _Outter_messages = message;
+}
+
+void Raft::_ApplySnapshot(const RaftMessage & _Message)
+{
+    // 读取上下文消息
+    LogIndex last_include_index = _Message.index;
+    TermId last_include_term = _Message.log_term;
+    std::string snapshot = _Message.snapshot;
+
+    // 应用层已经创建或安装快照，直接开始截断
+    _Node.truncateBefore(last_include_index + 1);
+
+    // 更新节点信息
+    _Node.setSnapshotIndex(last_include_index);
+    _Node.setSnapshotTerm(last_include_term);
+
+    // 持久化
+    _Is_dirty = true;
+    _Persist();
+
+    // 确认状态
+    _Is_snapshoting = false;
 }
 
 void Raft::_ApplyCommitedLogs()
@@ -508,6 +706,44 @@ void Raft::_ApplyCommitedLogs()
 
     // 传出上下文
     _Inner_messages.emplace_back(message);
+}
+
+void Raft::_TakeSnapshot()
+{
+    // 构造一个上下文消息
+    // 这里只是决定要创建快照
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::TakeSnapshot;
+    message.index = _Node.getLastAppliedIndex();
+    message.log_term = _Node.getTerm(message.index);
+
+    // 传出上下文
+    _Inner_messages.emplace_back(message);
+}
+
+void Raft::_CheckIfNeedSnapshot(LogIndex _Index)
+{
+    if (_Is_snapshoting) {
+        return;
+    }
+
+    // DEBUG("check snapshot index:%d", _Index);
+
+    _Is_snapshoting = true;
+
+    // 设置日志阈值为 1000 条
+    // constexpr int MAX_LOG_SIZE = 1000;
+    constexpr int MAX_LOG_SIZE = 3;     // for test
+
+    LogIndex snapshot_index = _Node.getBaseIndex();
+
+    if (_Index > snapshot_index && _Index - snapshot_index >= MAX_LOG_SIZE) {
+        // 超出阈值，准备创建快照
+        _TakeSnapshot();
+        return;
+    }
+
+    _Is_snapshoting = false;
 }
 
 int Raft::_GetRandomTimeout(int _Timeout_min, int _Timeout_max) const
@@ -532,6 +768,89 @@ bool Raft::_LogUpToDate(LogIndex _Last_index, TermId _Last_term)
         // 任期相同，比较索引
         return _Last_index >= my_index;
     }
+}
+
+void Raft::_Persist()
+{
+    if (!_Is_dirty) {
+        return;
+    }
+
+    // 创建一个结构体
+    PersistData persist_data;
+
+    // 添加基础信息
+    persist_data.set_term(_Node.getTerm());
+    persist_data.set_voted_for(_Node.getVotedFor());
+
+    // 拷贝剩余日志条目
+    const std::vector<RaftLogEntry> & log_entries = _Node.getLogFrom(_Node.getBaseIndex());
+    for (const RaftLogEntry & entry : log_entries) {
+        PersistLogEntry * ptr = persist_data.add_entries();
+        ptr->set_term(entry.getTerm());
+        ptr->set_command(entry.getCommand());
+    }
+
+    // 添加快照元信息
+    persist_data.set_snapshot_index(_Node.getSnapshotIndex());
+    persist_data.set_snapshot_term(_Node.getSnapshotTerm());
+
+    // 序列化
+    std::string persist_str;
+    if (!persist_data.SerializeToString(&persist_str)) {
+        ERROR("persist data serialization failed");
+        return;
+    }
+
+    // 写入文件
+    std::string file_path = "raftnode_" + std::to_string(_Node.getId()) + ".data";
+    std::ofstream out(file_path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open()) {
+        ERROR("open raftnode data file failed");
+        return;
+    }
+    out.write(persist_str.data(), persist_str.size());
+    out.close();
+
+    DEBUG("raft data persisted");
+
+    // 重置标记
+    _Is_dirty = false;
+}
+
+bool Raft::load()
+{
+    // 读取持久化文件
+    std::string file_path = "raftnode_" + std::to_string(_Node.getId()) + ".data";
+    std::ifstream in(file_path, std::ios::binary);
+    if (!in.is_open()) {
+        ERROR("open raftnode data file failed");
+        return false;
+    }
+    
+    // 反序列化
+    PersistData persist_data;
+    if (!persist_data.ParseFromIstream(&in)) {
+        ERROR("parse persisted data failed");
+        return false;
+    }
+
+    in.close();
+
+    // 加载持久化信息
+    _Node.setTerm(persist_data.term());
+    _Node.setVotedFor(persist_data.voted_for());
+    _Node.setSnapshotIndex(persist_data.snapshot_index());
+    _Node.setSnapshotTerm(persist_data.snapshot_term());
+
+    // 加载未快照日志
+    for (const PersistLogEntry & persist_entry : persist_data.entries()) {
+        RaftLogEntry entry(persist_entry.term(), persist_entry.command());
+        _Node.append(entry);
+    }
+
+    DEBUG("raft persisted data loaded");
+    return true;
 }
 
 } // namespace WW

@@ -1,10 +1,11 @@
 #include "RaftClerk.h"
 
 #include <sstream>
-#include <future>
+#include <fstream>
 
 #include <RaftPeer.h>
 #include <RaftLogger.h>
+#include <RaftSnapshot.pb.h>
 #include <muduo/base/Logging.h>
 
 namespace WW
@@ -39,6 +40,12 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
     // 设置 muduo 日志等级
     // muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
+
+    // 从 Raft 持久化恢复
+    if (_Raft->load()) {
+        // 读取数据成功，安装快照
+        _InstallSnapshotFromPersist();
+    }
 }
 
 RaftClerk::~RaftClerk()
@@ -46,6 +53,35 @@ RaftClerk::~RaftClerk()
     delete _Raft;
     delete _Server;
     delete _Op_server;
+}
+
+void RaftClerk::_InstallSnapshotFromPersist()
+{
+    // 打开快照文件
+    std::string file_path = "snapshot_" + std::to_string(_Raft->getId()) + ".snapshot";
+    std::ifstream in(file_path, std::ios::binary);
+    if (!in.is_open()) {
+        ERROR("open snapshot file failed");
+        return;
+    }
+
+    // 反序列化快照数据
+    SnapshotData snapshot;
+    if (!snapshot.ParseFromIstream(&in)) {
+        ERROR("parse snapshot file failed");
+        return;
+    }
+
+    // 应用快照数据到状态机
+    for (const SnapshotEntry & entry : snapshot.kvs()) {
+        if (!_KVStore.update(entry.key(), entry.value())) {
+            ERROR("install snapshot failed");
+            _KVStore.clear();
+            return;
+        }
+    }
+
+    DEBUG("install snapshot success");
 }
 
 void RaftClerk::run()
@@ -113,8 +149,17 @@ void RaftClerk::_HandleRaftMessageOut(const RaftMessage & _Message)
         case RaftMessage::MessageType::AppendEntriesRequest:
             _SendAppendEntriesRequest(_Message);
             break;
+        case RaftMessage::MessageType::InstallSnapshotRequest:
+            _SendInstallSnapshotRequest(_Message);
+            break;
         case RaftMessage::MessageType::LogEntriesApply:
             _ApplyLogEntries(_Message);
+            break;
+        case RaftMessage::MessageType::TakeSnapshot:
+            _GenerateSnapshot(_Message);
+            break;
+        case RaftMessage::MessageType::ApplySnapshot:
+            _InstallSnapshot(_Message);
             break;
         default:
             break;
@@ -166,6 +211,38 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
     client->AppendEntries(*append_entries_request, other_id, std::bind(&RaftClerk::_HandleAppendEntriesResponse, this, std::placeholders::_1, std::placeholders::_2));
 }
 
+void RaftClerk::_SendInstallSnapshotRequest(const RaftMessage & _Message)
+{
+    // 获取上下文中的信息
+    TermId this_term = _Message.term;
+    NodeId this_id = _Message.from;
+    NodeId other_id = _Message.to;
+    LogIndex this_last_include_index = _Message.index;
+    TermId this_last_include_term = _Message.log_term;
+    
+    // 打开快照文件
+    std::string file_path = "snapshot_" + std::to_string(_Raft->getId()) + ".snapshot";
+    std::ifstream in(file_path, std::ios::binary);
+    if (!in.is_open()) {
+        ERROR("open snapshot file failed");
+        return;
+    }
+
+    std::string this_snapshot((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+    // 构造 Request 消息体
+    InstallSnapshotRequest * install_snapshot_request = new InstallSnapshotRequest();
+    install_snapshot_request->set_term(this_term);
+    install_snapshot_request->set_leader_id(this_id);
+    install_snapshot_request->set_last_include_index(this_last_include_index);
+    install_snapshot_request->set_last_include_term(this_last_include_term);
+    install_snapshot_request->set_data(this_snapshot);
+
+    // 发送请求
+    RaftRpcClient * client = _Clients[_Message.to];
+    client->InstallSnapshot(*install_snapshot_request, other_id, std::bind(&RaftClerk::_HandleInstallSnapshotResponse, this, std::placeholders::_1, std::placeholders::_2));
+}
+
 void RaftClerk::_ApplyLogEntries(const RaftMessage & _Message)
 {
     // DEBUG("apply log entries");
@@ -180,13 +257,112 @@ void RaftClerk::_ApplyLogEntries(const RaftMessage & _Message)
     }
 }
 
+void RaftClerk::_GenerateSnapshot(const RaftMessage & _Message)
+{
+    // 取出上下文中的信息
+    LogIndex this_last_applied_log_index = _Message.index;
+    TermId this_last_applied_log_term = _Message.term;
+
+    // 开始创建快照
+    // 这里用 protobuf 来压缩快照
+    SnapshotData snapshot;
+    snapshot.set_last_applied_log_index(this_last_applied_log_index);
+    snapshot.set_last_applied_log_term(this_last_applied_log_term);
+
+    for (const auto & pair : _KVStore) {
+        SnapshotEntry * entry = snapshot.add_kvs();
+        entry->set_key(pair.first);
+        entry->set_value(pair.second);
+    }
+
+    std::string snapshot_str = snapshot.SerializeAsString();
+
+    // 写入文件
+    std::string file_path = "snapshot_" + std::to_string(_Raft->getId()) + ".snapshot";
+    std::ofstream out(file_path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open()) {
+        std::cerr << "Failed to open snapshot file for writing!" << std::endl;
+        return;
+    }
+    out.write(snapshot_str.data(), snapshot_str.size());
+    out.close();
+
+    DEBUG("snapshot created");
+
+    // 写入成功，通知 Raft 截断日志
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::ApplySnapshot;
+    message.index = this_last_applied_log_index;
+    message.log_term = this_last_applied_log_term;
+
+    // 通知 Raft
+    std::lock_guard<std::mutex> lock(_Mutex);
+    _Raft->step(message);
+}
+
+void RaftClerk::_InstallSnapshot(const RaftMessage & _Message)
+{
+    // 取出快照上下文中的信息
+    LogIndex this_index = _Message.index;
+    TermId this_log_term = _Message.log_term;
+    std::string snapshot_str = _Message.snapshot;
+
+    // 先保存快照到本地
+    std::string file_path = "snapshot_" + std::to_string(_Raft->getId()) + ".snapshot";
+    std::ofstream out(file_path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open()) {
+        std::cerr << "Failed to open snapshot file for writing!" << std::endl;
+        return;
+    }
+    out.write(snapshot_str.data(), snapshot_str.size());
+    out.close();
+
+    DEBUG("snapshot saved");
+
+    // 解析快照
+    SnapshotData snapshot;
+    if (!snapshot.ParseFromString(snapshot_str)) {
+        ERROR("parse snapshot failed");
+        return;
+    }
+
+    // 清空状态机，准备应用快照
+    _KVStore.clear();
+
+    // 安装快照
+    for (const SnapshotEntry & entry : snapshot.kvs()) {
+        std::string key = entry.key();
+        std::string value = entry.value();
+
+        // put 应该也一样
+        if (!_KVStore.update(key, value)) {
+            // 安装快照失败了，等待 Leader 下一次同步重试
+            ERROR("install snapshot failed");
+            _KVStore.clear();
+            return;
+        }
+    }
+
+    DEBUG("install snapshot success");
+
+    // 安装成功，通知 Raft
+    RaftMessage message;
+    message.type = RaftMessage::MessageType::ApplySnapshot;
+    message.index = this_index;
+    message.log_term = this_log_term;
+
+    // 通知 Raft
+    std::lock_guard<std::mutex> lock(_Mutex);
+    _Raft->step(message);
+}
+
 void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest & _Request, RequestVoteResponse & _Response)
 {
     // 取出请求中的消息
     TermId other_term = _Request.term();
     NodeId other_id = _Request.candidate_id();
     LogIndex other_last_log_index = _Request.last_log_index();
-    LogIndex other_last_log_term = _Request.last_log_term();
+    TermId other_last_log_term = _Request.last_log_term();
 
     // 构造消息
     RaftMessage message;
@@ -281,7 +457,6 @@ void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResp
 {
     // 取出响应中的信息
     TermId other_term = _Response.term();
-    NodeId other_id = _Id;
     bool other_success = _Response.success();
     LogIndex other_index = _Response.index();
 
@@ -289,9 +464,56 @@ void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResp
     RaftMessage message;
     message.type = RaftMessage::MessageType::AppendEntriesResponse;
     message.term = other_term;
-    message.from = other_id;
+    message.from = _Id;
     message.index = other_index;
     message.reject = !other_success;
+
+    // 传递给 Raft 状态机
+    std::lock_guard<std::mutex> lock(_Mutex);
+    _Raft->step(message);
+}
+
+void RaftClerk::_HandleInstallSnapshotRequest(const InstallSnapshotRequest & _Request, InstallSnapshotResponse & _Response)
+{
+    // 取出请求中的信息
+    TermId other_term = _Request.term();
+    NodeId other_id = _Request.leader_id();
+    LogIndex other_last_include_index = _Request.last_include_index();
+    TermId other_last_include_term = _Request.last_include_term();
+    std::string other_snapshot = _Request.data();
+
+    // 构造消息
+    RaftMessage message;
+    message.term = other_term;
+    message.from = other_id;
+    message.index = other_last_include_index;
+    message.log_term = other_last_include_term;
+    message.snapshot = other_snapshot;
+
+    // 传入 Raft
+    std::unique_lock<std::mutex> lock(_Mutex);
+    _Raft->step(message);
+
+    // 取出当此响应
+    const RaftMessage & out_message = _Raft->readOutterMessage();
+    lock.unlock();
+
+    // 读取消息中的信息
+    TermId this_term = out_message.term;
+
+    // 设置响应
+    _Response.set_term(this_term);
+}
+
+void RaftClerk::_HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse & _Response)
+{
+    // 取出响应中的信息
+    TermId other_term = _Response.term();
+
+    // 构造消息
+    RaftMessage message;
+    message.term = other_term;
+    message.from = _Id;
 
     // 传递给 Raft 状态机
     std::lock_guard<std::mutex> lock(_Mutex);
