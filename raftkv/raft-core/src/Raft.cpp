@@ -183,7 +183,7 @@ void Raft::_SendAppendEntries(bool _IsHearbeat)
         // DEBUG("prev_index:%d, base_index:%d, last_index:%d", prev_index, _Node.getBaseIndex(), _Node.getLastIndex());
         TermId prev_term = _Node.getTerm(prev_index);
 
-        if (prev_term == 0) {
+        if (prev_term == 0 && prev_index != 0) {
             // 无论是心跳还是同步，都可以改为快照发送
             // 该位置可能非法或处于快照的范围内，改为发送 InstallSnapshot
             heartbeat_request.type = RaftMessage::MessageType::InstallSnapshotRequest;
@@ -392,7 +392,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftMessage & _Message)
     if (!_Node.match(other_last_log_index, other_last_log_term)) {
         // 日志存在冲突，需要 Leader 进行回退
         DEBUG("log (index:%d , term:%zu) doesn't match (index:%d, term:%zu), refuse append entries",
-                other_last_log_index, other_last_log_term, _Node.getLastIndex(), _Node.getLastTerm());
+                other_last_log_index, other_last_log_term, other_last_log_index, _Node.getTerm(other_last_log_index));
         // 截断该索引之后的所有日志
         _Node.truncateAfter(other_last_log_index);
         // 告知自己的索引位置，冲突情况下不使用
@@ -842,6 +842,11 @@ bool Raft::load()
     _Node.setVotedFor(persist_data.voted_for());
     _Node.setSnapshotIndex(persist_data.snapshot_index());
     _Node.setSnapshotTerm(persist_data.snapshot_term());
+
+    DEBUG("term: %zu", persist_data.term());
+    DEBUG("voted for: node: %d", persist_data.voted_for());
+    DEBUG("snapshot index: %d", persist_data.snapshot_index());
+    DEBUG("snapshot term: %zu", persist_data.snapshot_term());
 
     // 加载未快照日志
     for (const PersistLogEntry & persist_entry : persist_data.entries()) {
