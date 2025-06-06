@@ -39,7 +39,7 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     _Op_server = new RaftOperationServer(&_Loop, _Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Op_service);
 
     // 设置 muduo 日志等级
-    // muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
+    muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
 
     // 从 Raft 持久化恢复
     if (_Raft->load()) {
@@ -61,27 +61,27 @@ void RaftClerk::_InstallSnapshotFromPersist()
     std::string file_path = "snapshot_" + std::to_string(_Raft->getId()) + ".snapshot";
     std::ifstream in(file_path, std::ios::binary);
     if (!in.is_open()) {
-        ERROR("open snapshot file failed");
+        ERROR("open persist snapshot file failed");
         return;
     }
 
     // 反序列化快照数据
     SnapshotData snapshot;
     if (!snapshot.ParseFromIstream(&in)) {
-        ERROR("parse snapshot file failed");
+        ERROR("parse persist snapshot file failed");
         return;
     }
 
     // 应用快照数据到状态机
     for (const SnapshotEntry & entry : snapshot.kvs()) {
         if (!_KVStore.update(entry.key(), entry.value())) {
-            ERROR("install snapshot failed");
+            ERROR("install persist snapshot failed");
             _KVStore.clear();
             return;
         }
     }
 
-    DEBUG("install snapshot success");
+    DEBUG("install persist snapshot success");
 }
 
 void RaftClerk::run()

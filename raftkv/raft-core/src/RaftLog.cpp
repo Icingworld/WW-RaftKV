@@ -3,13 +3,15 @@
 #include <stdexcept>
 #include <iostream>
 
+#include <RaftLogger.h>
+
 namespace WW
 {
 
 RaftLog::RaftLog()
     : _Logs()
     , _Base_index(1)
-    , _Snapshot_index(1)
+    , _Snapshot_index(0)
     , _Snapshot_term(0)
 {
 }
