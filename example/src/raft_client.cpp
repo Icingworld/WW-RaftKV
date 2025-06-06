@@ -5,6 +5,7 @@
 #include <client_channel.h>
 #include <RaftOperation.pb.h>
 #include <RaftRpcClosure.h>
+#include <muduo/base/Logging.h>
 
 void ParseResponse(WW::RaftOperationService_Stub* stub, const WW::RaftOperationRequest& request, const WW::RaftOperationResponse& response)
 {
@@ -83,6 +84,8 @@ int main(int argc, char** argv)
         std::cerr << "invalid parameter!" << std::endl;
         return 1;
     }
+
+    muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
 
     std::string ip = "127.0.0.1";
     std::string port = "4397";
