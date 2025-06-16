@@ -45,39 +45,39 @@ struct TableStruct_RaftPersist_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_RaftPersist_2eproto;
 namespace WW {
-class PersistData;
-struct PersistDataDefaultTypeInternal;
-extern PersistDataDefaultTypeInternal _PersistData_default_instance_;
-class PersistLogEntry;
-struct PersistLogEntryDefaultTypeInternal;
-extern PersistLogEntryDefaultTypeInternal _PersistLogEntry_default_instance_;
+class RaftPersistData;
+struct RaftPersistDataDefaultTypeInternal;
+extern RaftPersistDataDefaultTypeInternal _RaftPersistData_default_instance_;
+class RaftPersistLogEntry;
+struct RaftPersistLogEntryDefaultTypeInternal;
+extern RaftPersistLogEntryDefaultTypeInternal _RaftPersistLogEntry_default_instance_;
 }  // namespace WW
 PROTOBUF_NAMESPACE_OPEN
-template<> ::WW::PersistData* Arena::CreateMaybeMessage<::WW::PersistData>(Arena*);
-template<> ::WW::PersistLogEntry* Arena::CreateMaybeMessage<::WW::PersistLogEntry>(Arena*);
+template<> ::WW::RaftPersistData* Arena::CreateMaybeMessage<::WW::RaftPersistData>(Arena*);
+template<> ::WW::RaftPersistLogEntry* Arena::CreateMaybeMessage<::WW::RaftPersistLogEntry>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace WW {
 
 // ===================================================================
 
-class PersistLogEntry final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:WW.PersistLogEntry) */ {
+class RaftPersistLogEntry final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:WW.RaftPersistLogEntry) */ {
  public:
-  inline PersistLogEntry() : PersistLogEntry(nullptr) {}
-  ~PersistLogEntry() override;
-  explicit PROTOBUF_CONSTEXPR PersistLogEntry(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline RaftPersistLogEntry() : RaftPersistLogEntry(nullptr) {}
+  ~RaftPersistLogEntry() override;
+  explicit PROTOBUF_CONSTEXPR RaftPersistLogEntry(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  PersistLogEntry(const PersistLogEntry& from);
-  PersistLogEntry(PersistLogEntry&& from) noexcept
-    : PersistLogEntry() {
+  RaftPersistLogEntry(const RaftPersistLogEntry& from);
+  RaftPersistLogEntry(RaftPersistLogEntry&& from) noexcept
+    : RaftPersistLogEntry() {
     *this = ::std::move(from);
   }
 
-  inline PersistLogEntry& operator=(const PersistLogEntry& from) {
+  inline RaftPersistLogEntry& operator=(const RaftPersistLogEntry& from) {
     CopyFrom(from);
     return *this;
   }
-  inline PersistLogEntry& operator=(PersistLogEntry&& from) noexcept {
+  inline RaftPersistLogEntry& operator=(RaftPersistLogEntry&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -100,20 +100,20 @@ class PersistLogEntry final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const PersistLogEntry& default_instance() {
+  static const RaftPersistLogEntry& default_instance() {
     return *internal_default_instance();
   }
-  static inline const PersistLogEntry* internal_default_instance() {
-    return reinterpret_cast<const PersistLogEntry*>(
-               &_PersistLogEntry_default_instance_);
+  static inline const RaftPersistLogEntry* internal_default_instance() {
+    return reinterpret_cast<const RaftPersistLogEntry*>(
+               &_RaftPersistLogEntry_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     0;
 
-  friend void swap(PersistLogEntry& a, PersistLogEntry& b) {
+  friend void swap(RaftPersistLogEntry& a, RaftPersistLogEntry& b) {
     a.Swap(&b);
   }
-  inline void Swap(PersistLogEntry* other) {
+  inline void Swap(RaftPersistLogEntry* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -126,7 +126,7 @@ class PersistLogEntry final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(PersistLogEntry* other) {
+  void UnsafeArenaSwap(RaftPersistLogEntry* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -134,14 +134,14 @@ class PersistLogEntry final :
 
   // implements Message ----------------------------------------------
 
-  PersistLogEntry* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<PersistLogEntry>(arena);
+  RaftPersistLogEntry* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<RaftPersistLogEntry>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const PersistLogEntry& from);
+  void CopyFrom(const RaftPersistLogEntry& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const PersistLogEntry& from) {
-    PersistLogEntry::MergeImpl(*this, from);
+  void MergeFrom( const RaftPersistLogEntry& from) {
+    RaftPersistLogEntry::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -159,15 +159,15 @@ class PersistLogEntry final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(PersistLogEntry* other);
+  void InternalSwap(RaftPersistLogEntry* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "WW.PersistLogEntry";
+    return "WW.RaftPersistLogEntry";
   }
   protected:
-  explicit PersistLogEntry(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit RaftPersistLogEntry(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -181,10 +181,10 @@ class PersistLogEntry final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kCommandFieldNumber = 3,
-    kTermFieldNumber = 2,
+    kCommandFieldNumber = 2,
+    kTermFieldNumber = 1,
   };
-  // bytes command = 3;
+  // bytes command = 2;
   void clear_command();
   const std::string& command() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -198,16 +198,16 @@ class PersistLogEntry final :
   std::string* _internal_mutable_command();
   public:
 
-  // int32 term = 2;
+  // int64 term = 1;
   void clear_term();
-  int32_t term() const;
-  void set_term(int32_t value);
+  int64_t term() const;
+  void set_term(int64_t value);
   private:
-  int32_t _internal_term() const;
-  void _internal_set_term(int32_t value);
+  int64_t _internal_term() const;
+  void _internal_set_term(int64_t value);
   public:
 
-  // @@protoc_insertion_point(class_scope:WW.PersistLogEntry)
+  // @@protoc_insertion_point(class_scope:WW.RaftPersistLogEntry)
  private:
   class _Internal;
 
@@ -216,7 +216,7 @@ class PersistLogEntry final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr command_;
-    int32_t term_;
+    int64_t term_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -224,24 +224,24 @@ class PersistLogEntry final :
 };
 // -------------------------------------------------------------------
 
-class PersistData final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:WW.PersistData) */ {
+class RaftPersistData final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:WW.RaftPersistData) */ {
  public:
-  inline PersistData() : PersistData(nullptr) {}
-  ~PersistData() override;
-  explicit PROTOBUF_CONSTEXPR PersistData(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline RaftPersistData() : RaftPersistData(nullptr) {}
+  ~RaftPersistData() override;
+  explicit PROTOBUF_CONSTEXPR RaftPersistData(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  PersistData(const PersistData& from);
-  PersistData(PersistData&& from) noexcept
-    : PersistData() {
+  RaftPersistData(const RaftPersistData& from);
+  RaftPersistData(RaftPersistData&& from) noexcept
+    : RaftPersistData() {
     *this = ::std::move(from);
   }
 
-  inline PersistData& operator=(const PersistData& from) {
+  inline RaftPersistData& operator=(const RaftPersistData& from) {
     CopyFrom(from);
     return *this;
   }
-  inline PersistData& operator=(PersistData&& from) noexcept {
+  inline RaftPersistData& operator=(RaftPersistData&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -264,20 +264,20 @@ class PersistData final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const PersistData& default_instance() {
+  static const RaftPersistData& default_instance() {
     return *internal_default_instance();
   }
-  static inline const PersistData* internal_default_instance() {
-    return reinterpret_cast<const PersistData*>(
-               &_PersistData_default_instance_);
+  static inline const RaftPersistData* internal_default_instance() {
+    return reinterpret_cast<const RaftPersistData*>(
+               &_RaftPersistData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     1;
 
-  friend void swap(PersistData& a, PersistData& b) {
+  friend void swap(RaftPersistData& a, RaftPersistData& b) {
     a.Swap(&b);
   }
-  inline void Swap(PersistData* other) {
+  inline void Swap(RaftPersistData* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -290,7 +290,7 @@ class PersistData final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(PersistData* other) {
+  void UnsafeArenaSwap(RaftPersistData* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -298,14 +298,14 @@ class PersistData final :
 
   // implements Message ----------------------------------------------
 
-  PersistData* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<PersistData>(arena);
+  RaftPersistData* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<RaftPersistData>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const PersistData& from);
+  void CopyFrom(const RaftPersistData& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const PersistData& from) {
-    PersistData::MergeImpl(*this, from);
+  void MergeFrom( const RaftPersistData& from) {
+    RaftPersistData::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -323,15 +323,15 @@ class PersistData final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(PersistData* other);
+  void InternalSwap(RaftPersistData* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "WW.PersistData";
+    return "WW.RaftPersistData";
   }
   protected:
-  explicit PersistData(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit RaftPersistData(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -348,64 +348,64 @@ class PersistData final :
     kEntriesFieldNumber = 3,
     kTermFieldNumber = 1,
     kVotedForFieldNumber = 2,
-    kSnapshotIndexFieldNumber = 4,
-    kSnapshotTermFieldNumber = 5,
+    kLastIncludedIndexFieldNumber = 4,
+    kLastIncludedTermFieldNumber = 5,
   };
-  // repeated .WW.PersistLogEntry entries = 3;
+  // repeated .WW.RaftPersistLogEntry entries = 3;
   int entries_size() const;
   private:
   int _internal_entries_size() const;
   public:
   void clear_entries();
-  ::WW::PersistLogEntry* mutable_entries(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::PersistLogEntry >*
+  ::WW::RaftPersistLogEntry* mutable_entries(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::RaftPersistLogEntry >*
       mutable_entries();
   private:
-  const ::WW::PersistLogEntry& _internal_entries(int index) const;
-  ::WW::PersistLogEntry* _internal_add_entries();
+  const ::WW::RaftPersistLogEntry& _internal_entries(int index) const;
+  ::WW::RaftPersistLogEntry* _internal_add_entries();
   public:
-  const ::WW::PersistLogEntry& entries(int index) const;
-  ::WW::PersistLogEntry* add_entries();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::PersistLogEntry >&
+  const ::WW::RaftPersistLogEntry& entries(int index) const;
+  ::WW::RaftPersistLogEntry* add_entries();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::RaftPersistLogEntry >&
       entries() const;
 
-  // int32 term = 1;
+  // int64 term = 1;
   void clear_term();
-  int32_t term() const;
-  void set_term(int32_t value);
+  int64_t term() const;
+  void set_term(int64_t value);
   private:
-  int32_t _internal_term() const;
-  void _internal_set_term(int32_t value);
+  int64_t _internal_term() const;
+  void _internal_set_term(int64_t value);
   public:
 
-  // int32 voted_for = 2;
+  // int64 voted_for = 2;
   void clear_voted_for();
-  int32_t voted_for() const;
-  void set_voted_for(int32_t value);
+  int64_t voted_for() const;
+  void set_voted_for(int64_t value);
   private:
-  int32_t _internal_voted_for() const;
-  void _internal_set_voted_for(int32_t value);
+  int64_t _internal_voted_for() const;
+  void _internal_set_voted_for(int64_t value);
   public:
 
-  // int32 snapshot_index = 4;
-  void clear_snapshot_index();
-  int32_t snapshot_index() const;
-  void set_snapshot_index(int32_t value);
+  // int64 last_included_index = 4;
+  void clear_last_included_index();
+  int64_t last_included_index() const;
+  void set_last_included_index(int64_t value);
   private:
-  int32_t _internal_snapshot_index() const;
-  void _internal_set_snapshot_index(int32_t value);
+  int64_t _internal_last_included_index() const;
+  void _internal_set_last_included_index(int64_t value);
   public:
 
-  // int32 snapshot_term = 5;
-  void clear_snapshot_term();
-  int32_t snapshot_term() const;
-  void set_snapshot_term(int32_t value);
+  // int64 last_included_term = 5;
+  void clear_last_included_term();
+  int64_t last_included_term() const;
+  void set_last_included_term(int64_t value);
   private:
-  int32_t _internal_snapshot_term() const;
-  void _internal_set_snapshot_term(int32_t value);
+  int64_t _internal_last_included_term() const;
+  void _internal_set_last_included_term(int64_t value);
   public:
 
-  // @@protoc_insertion_point(class_scope:WW.PersistData)
+  // @@protoc_insertion_point(class_scope:WW.RaftPersistData)
  private:
   class _Internal;
 
@@ -413,11 +413,11 @@ class PersistData final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::PersistLogEntry > entries_;
-    int32_t term_;
-    int32_t voted_for_;
-    int32_t snapshot_index_;
-    int32_t snapshot_term_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::RaftPersistLogEntry > entries_;
+    int64_t term_;
+    int64_t voted_for_;
+    int64_t last_included_index_;
+    int64_t last_included_term_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -432,64 +432,64 @@ class PersistData final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
-// PersistLogEntry
+// RaftPersistLogEntry
 
-// int32 term = 2;
-inline void PersistLogEntry::clear_term() {
-  _impl_.term_ = 0;
+// int64 term = 1;
+inline void RaftPersistLogEntry::clear_term() {
+  _impl_.term_ = int64_t{0};
 }
-inline int32_t PersistLogEntry::_internal_term() const {
+inline int64_t RaftPersistLogEntry::_internal_term() const {
   return _impl_.term_;
 }
-inline int32_t PersistLogEntry::term() const {
-  // @@protoc_insertion_point(field_get:WW.PersistLogEntry.term)
+inline int64_t RaftPersistLogEntry::term() const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistLogEntry.term)
   return _internal_term();
 }
-inline void PersistLogEntry::_internal_set_term(int32_t value) {
+inline void RaftPersistLogEntry::_internal_set_term(int64_t value) {
   
   _impl_.term_ = value;
 }
-inline void PersistLogEntry::set_term(int32_t value) {
+inline void RaftPersistLogEntry::set_term(int64_t value) {
   _internal_set_term(value);
-  // @@protoc_insertion_point(field_set:WW.PersistLogEntry.term)
+  // @@protoc_insertion_point(field_set:WW.RaftPersistLogEntry.term)
 }
 
-// bytes command = 3;
-inline void PersistLogEntry::clear_command() {
+// bytes command = 2;
+inline void RaftPersistLogEntry::clear_command() {
   _impl_.command_.ClearToEmpty();
 }
-inline const std::string& PersistLogEntry::command() const {
-  // @@protoc_insertion_point(field_get:WW.PersistLogEntry.command)
+inline const std::string& RaftPersistLogEntry::command() const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistLogEntry.command)
   return _internal_command();
 }
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
-void PersistLogEntry::set_command(ArgT0&& arg0, ArgT... args) {
+void RaftPersistLogEntry::set_command(ArgT0&& arg0, ArgT... args) {
  
  _impl_.command_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:WW.PersistLogEntry.command)
+  // @@protoc_insertion_point(field_set:WW.RaftPersistLogEntry.command)
 }
-inline std::string* PersistLogEntry::mutable_command() {
+inline std::string* RaftPersistLogEntry::mutable_command() {
   std::string* _s = _internal_mutable_command();
-  // @@protoc_insertion_point(field_mutable:WW.PersistLogEntry.command)
+  // @@protoc_insertion_point(field_mutable:WW.RaftPersistLogEntry.command)
   return _s;
 }
-inline const std::string& PersistLogEntry::_internal_command() const {
+inline const std::string& RaftPersistLogEntry::_internal_command() const {
   return _impl_.command_.Get();
 }
-inline void PersistLogEntry::_internal_set_command(const std::string& value) {
+inline void RaftPersistLogEntry::_internal_set_command(const std::string& value) {
   
   _impl_.command_.Set(value, GetArenaForAllocation());
 }
-inline std::string* PersistLogEntry::_internal_mutable_command() {
+inline std::string* RaftPersistLogEntry::_internal_mutable_command() {
   
   return _impl_.command_.Mutable(GetArenaForAllocation());
 }
-inline std::string* PersistLogEntry::release_command() {
-  // @@protoc_insertion_point(field_release:WW.PersistLogEntry.command)
+inline std::string* RaftPersistLogEntry::release_command() {
+  // @@protoc_insertion_point(field_release:WW.RaftPersistLogEntry.command)
   return _impl_.command_.Release();
 }
-inline void PersistLogEntry::set_allocated_command(std::string* command) {
+inline void RaftPersistLogEntry::set_allocated_command(std::string* command) {
   if (command != nullptr) {
     
   } else {
@@ -501,131 +501,131 @@ inline void PersistLogEntry::set_allocated_command(std::string* command) {
     _impl_.command_.Set("", GetArenaForAllocation());
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:WW.PersistLogEntry.command)
+  // @@protoc_insertion_point(field_set_allocated:WW.RaftPersistLogEntry.command)
 }
 
 // -------------------------------------------------------------------
 
-// PersistData
+// RaftPersistData
 
-// int32 term = 1;
-inline void PersistData::clear_term() {
-  _impl_.term_ = 0;
+// int64 term = 1;
+inline void RaftPersistData::clear_term() {
+  _impl_.term_ = int64_t{0};
 }
-inline int32_t PersistData::_internal_term() const {
+inline int64_t RaftPersistData::_internal_term() const {
   return _impl_.term_;
 }
-inline int32_t PersistData::term() const {
-  // @@protoc_insertion_point(field_get:WW.PersistData.term)
+inline int64_t RaftPersistData::term() const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistData.term)
   return _internal_term();
 }
-inline void PersistData::_internal_set_term(int32_t value) {
+inline void RaftPersistData::_internal_set_term(int64_t value) {
   
   _impl_.term_ = value;
 }
-inline void PersistData::set_term(int32_t value) {
+inline void RaftPersistData::set_term(int64_t value) {
   _internal_set_term(value);
-  // @@protoc_insertion_point(field_set:WW.PersistData.term)
+  // @@protoc_insertion_point(field_set:WW.RaftPersistData.term)
 }
 
-// int32 voted_for = 2;
-inline void PersistData::clear_voted_for() {
-  _impl_.voted_for_ = 0;
+// int64 voted_for = 2;
+inline void RaftPersistData::clear_voted_for() {
+  _impl_.voted_for_ = int64_t{0};
 }
-inline int32_t PersistData::_internal_voted_for() const {
+inline int64_t RaftPersistData::_internal_voted_for() const {
   return _impl_.voted_for_;
 }
-inline int32_t PersistData::voted_for() const {
-  // @@protoc_insertion_point(field_get:WW.PersistData.voted_for)
+inline int64_t RaftPersistData::voted_for() const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistData.voted_for)
   return _internal_voted_for();
 }
-inline void PersistData::_internal_set_voted_for(int32_t value) {
+inline void RaftPersistData::_internal_set_voted_for(int64_t value) {
   
   _impl_.voted_for_ = value;
 }
-inline void PersistData::set_voted_for(int32_t value) {
+inline void RaftPersistData::set_voted_for(int64_t value) {
   _internal_set_voted_for(value);
-  // @@protoc_insertion_point(field_set:WW.PersistData.voted_for)
+  // @@protoc_insertion_point(field_set:WW.RaftPersistData.voted_for)
 }
 
-// repeated .WW.PersistLogEntry entries = 3;
-inline int PersistData::_internal_entries_size() const {
+// repeated .WW.RaftPersistLogEntry entries = 3;
+inline int RaftPersistData::_internal_entries_size() const {
   return _impl_.entries_.size();
 }
-inline int PersistData::entries_size() const {
+inline int RaftPersistData::entries_size() const {
   return _internal_entries_size();
 }
-inline void PersistData::clear_entries() {
+inline void RaftPersistData::clear_entries() {
   _impl_.entries_.Clear();
 }
-inline ::WW::PersistLogEntry* PersistData::mutable_entries(int index) {
-  // @@protoc_insertion_point(field_mutable:WW.PersistData.entries)
+inline ::WW::RaftPersistLogEntry* RaftPersistData::mutable_entries(int index) {
+  // @@protoc_insertion_point(field_mutable:WW.RaftPersistData.entries)
   return _impl_.entries_.Mutable(index);
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::PersistLogEntry >*
-PersistData::mutable_entries() {
-  // @@protoc_insertion_point(field_mutable_list:WW.PersistData.entries)
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::RaftPersistLogEntry >*
+RaftPersistData::mutable_entries() {
+  // @@protoc_insertion_point(field_mutable_list:WW.RaftPersistData.entries)
   return &_impl_.entries_;
 }
-inline const ::WW::PersistLogEntry& PersistData::_internal_entries(int index) const {
+inline const ::WW::RaftPersistLogEntry& RaftPersistData::_internal_entries(int index) const {
   return _impl_.entries_.Get(index);
 }
-inline const ::WW::PersistLogEntry& PersistData::entries(int index) const {
-  // @@protoc_insertion_point(field_get:WW.PersistData.entries)
+inline const ::WW::RaftPersistLogEntry& RaftPersistData::entries(int index) const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistData.entries)
   return _internal_entries(index);
 }
-inline ::WW::PersistLogEntry* PersistData::_internal_add_entries() {
+inline ::WW::RaftPersistLogEntry* RaftPersistData::_internal_add_entries() {
   return _impl_.entries_.Add();
 }
-inline ::WW::PersistLogEntry* PersistData::add_entries() {
-  ::WW::PersistLogEntry* _add = _internal_add_entries();
-  // @@protoc_insertion_point(field_add:WW.PersistData.entries)
+inline ::WW::RaftPersistLogEntry* RaftPersistData::add_entries() {
+  ::WW::RaftPersistLogEntry* _add = _internal_add_entries();
+  // @@protoc_insertion_point(field_add:WW.RaftPersistData.entries)
   return _add;
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::PersistLogEntry >&
-PersistData::entries() const {
-  // @@protoc_insertion_point(field_list:WW.PersistData.entries)
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::WW::RaftPersistLogEntry >&
+RaftPersistData::entries() const {
+  // @@protoc_insertion_point(field_list:WW.RaftPersistData.entries)
   return _impl_.entries_;
 }
 
-// int32 snapshot_index = 4;
-inline void PersistData::clear_snapshot_index() {
-  _impl_.snapshot_index_ = 0;
+// int64 last_included_index = 4;
+inline void RaftPersistData::clear_last_included_index() {
+  _impl_.last_included_index_ = int64_t{0};
 }
-inline int32_t PersistData::_internal_snapshot_index() const {
-  return _impl_.snapshot_index_;
+inline int64_t RaftPersistData::_internal_last_included_index() const {
+  return _impl_.last_included_index_;
 }
-inline int32_t PersistData::snapshot_index() const {
-  // @@protoc_insertion_point(field_get:WW.PersistData.snapshot_index)
-  return _internal_snapshot_index();
+inline int64_t RaftPersistData::last_included_index() const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistData.last_included_index)
+  return _internal_last_included_index();
 }
-inline void PersistData::_internal_set_snapshot_index(int32_t value) {
+inline void RaftPersistData::_internal_set_last_included_index(int64_t value) {
   
-  _impl_.snapshot_index_ = value;
+  _impl_.last_included_index_ = value;
 }
-inline void PersistData::set_snapshot_index(int32_t value) {
-  _internal_set_snapshot_index(value);
-  // @@protoc_insertion_point(field_set:WW.PersistData.snapshot_index)
+inline void RaftPersistData::set_last_included_index(int64_t value) {
+  _internal_set_last_included_index(value);
+  // @@protoc_insertion_point(field_set:WW.RaftPersistData.last_included_index)
 }
 
-// int32 snapshot_term = 5;
-inline void PersistData::clear_snapshot_term() {
-  _impl_.snapshot_term_ = 0;
+// int64 last_included_term = 5;
+inline void RaftPersistData::clear_last_included_term() {
+  _impl_.last_included_term_ = int64_t{0};
 }
-inline int32_t PersistData::_internal_snapshot_term() const {
-  return _impl_.snapshot_term_;
+inline int64_t RaftPersistData::_internal_last_included_term() const {
+  return _impl_.last_included_term_;
 }
-inline int32_t PersistData::snapshot_term() const {
-  // @@protoc_insertion_point(field_get:WW.PersistData.snapshot_term)
-  return _internal_snapshot_term();
+inline int64_t RaftPersistData::last_included_term() const {
+  // @@protoc_insertion_point(field_get:WW.RaftPersistData.last_included_term)
+  return _internal_last_included_term();
 }
-inline void PersistData::_internal_set_snapshot_term(int32_t value) {
+inline void RaftPersistData::_internal_set_last_included_term(int64_t value) {
   
-  _impl_.snapshot_term_ = value;
+  _impl_.last_included_term_ = value;
 }
-inline void PersistData::set_snapshot_term(int32_t value) {
-  _internal_set_snapshot_term(value);
-  // @@protoc_insertion_point(field_set:WW.PersistData.snapshot_term)
+inline void RaftPersistData::set_last_included_term(int64_t value) {
+  _internal_set_last_included_term(value);
+  // @@protoc_insertion_point(field_set:WW.RaftPersistData.last_included_term)
 }
 
 #ifdef __GNUC__

@@ -6,4 +6,8 @@ target_include_directories(raft-core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+target_link_libraries(raft-core PUBLIC
+    WW::logger
+)
+
 add_library(WW::raft-core ALIAS raft-core)

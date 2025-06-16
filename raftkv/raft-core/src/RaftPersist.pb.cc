@@ -21,37 +21,37 @@ namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
 namespace WW {
-PROTOBUF_CONSTEXPR PersistLogEntry::PersistLogEntry(
+PROTOBUF_CONSTEXPR RaftPersistLogEntry::RaftPersistLogEntry(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.command_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.term_)*/0
+  , /*decltype(_impl_.term_)*/int64_t{0}
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct PersistLogEntryDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR PersistLogEntryDefaultTypeInternal()
+struct RaftPersistLogEntryDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR RaftPersistLogEntryDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~PersistLogEntryDefaultTypeInternal() {}
+  ~RaftPersistLogEntryDefaultTypeInternal() {}
   union {
-    PersistLogEntry _instance;
+    RaftPersistLogEntry _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PersistLogEntryDefaultTypeInternal _PersistLogEntry_default_instance_;
-PROTOBUF_CONSTEXPR PersistData::PersistData(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 RaftPersistLogEntryDefaultTypeInternal _RaftPersistLogEntry_default_instance_;
+PROTOBUF_CONSTEXPR RaftPersistData::RaftPersistData(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.entries_)*/{}
-  , /*decltype(_impl_.term_)*/0
-  , /*decltype(_impl_.voted_for_)*/0
-  , /*decltype(_impl_.snapshot_index_)*/0
-  , /*decltype(_impl_.snapshot_term_)*/0
+  , /*decltype(_impl_.term_)*/int64_t{0}
+  , /*decltype(_impl_.voted_for_)*/int64_t{0}
+  , /*decltype(_impl_.last_included_index_)*/int64_t{0}
+  , /*decltype(_impl_.last_included_term_)*/int64_t{0}
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct PersistDataDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR PersistDataDefaultTypeInternal()
+struct RaftPersistDataDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR RaftPersistDataDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~PersistDataDefaultTypeInternal() {}
+  ~RaftPersistDataDefaultTypeInternal() {}
   union {
-    PersistData _instance;
+    RaftPersistData _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PersistDataDefaultTypeInternal _PersistData_default_instance_;
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 RaftPersistDataDefaultTypeInternal _RaftPersistData_default_instance_;
 }  // namespace WW
 static ::_pb::Metadata file_level_metadata_RaftPersist_2eproto[2];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_RaftPersist_2eproto = nullptr;
@@ -59,46 +59,46 @@ static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors
 
 const uint32_t TableStruct_RaftPersist_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::WW::PersistLogEntry, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistLogEntry, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::WW::PersistLogEntry, _impl_.term_),
-  PROTOBUF_FIELD_OFFSET(::WW::PersistLogEntry, _impl_.command_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistLogEntry, _impl_.term_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistLogEntry, _impl_.command_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::WW::PersistData, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistData, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::WW::PersistData, _impl_.term_),
-  PROTOBUF_FIELD_OFFSET(::WW::PersistData, _impl_.voted_for_),
-  PROTOBUF_FIELD_OFFSET(::WW::PersistData, _impl_.entries_),
-  PROTOBUF_FIELD_OFFSET(::WW::PersistData, _impl_.snapshot_index_),
-  PROTOBUF_FIELD_OFFSET(::WW::PersistData, _impl_.snapshot_term_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistData, _impl_.term_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistData, _impl_.voted_for_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistData, _impl_.entries_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistData, _impl_.last_included_index_),
+  PROTOBUF_FIELD_OFFSET(::WW::RaftPersistData, _impl_.last_included_term_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::WW::PersistLogEntry)},
-  { 8, -1, -1, sizeof(::WW::PersistData)},
+  { 0, -1, -1, sizeof(::WW::RaftPersistLogEntry)},
+  { 8, -1, -1, sizeof(::WW::RaftPersistData)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
-  &::WW::_PersistLogEntry_default_instance_._instance,
-  &::WW::_PersistData_default_instance_._instance,
+  &::WW::_RaftPersistLogEntry_default_instance_._instance,
+  &::WW::_RaftPersistData_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_RaftPersist_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\021RaftPersist.proto\022\002WW\"0\n\017PersistLogEnt"
-  "ry\022\014\n\004term\030\002 \001(\005\022\017\n\007command\030\003 \001(\014\"\203\001\n\013Pe"
-  "rsistData\022\014\n\004term\030\001 \001(\005\022\021\n\tvoted_for\030\002 \001"
-  "(\005\022$\n\007entries\030\003 \003(\0132\023.WW.PersistLogEntry"
-  "\022\026\n\016snapshot_index\030\004 \001(\005\022\025\n\rsnapshot_ter"
-  "m\030\005 \001(\005b\006proto3"
+  "\n\021RaftPersist.proto\022\002WW\"4\n\023RaftPersistLo"
+  "gEntry\022\014\n\004term\030\001 \001(\003\022\017\n\007command\030\002 \001(\014\"\225\001"
+  "\n\017RaftPersistData\022\014\n\004term\030\001 \001(\003\022\021\n\tvoted"
+  "_for\030\002 \001(\003\022(\n\007entries\030\003 \003(\0132\027.WW.RaftPer"
+  "sistLogEntry\022\033\n\023last_included_index\030\004 \001("
+  "\003\022\032\n\022last_included_term\030\005 \001(\003b\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_RaftPersist_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_RaftPersist_2eproto = {
-    false, false, 215, descriptor_table_protodef_RaftPersist_2eproto,
+    false, false, 237, descriptor_table_protodef_RaftPersist_2eproto,
     "RaftPersist.proto",
     &descriptor_table_RaftPersist_2eproto_once, nullptr, 0, 2,
     schemas, file_default_instances, TableStruct_RaftPersist_2eproto::offsets,
@@ -115,19 +115,19 @@ namespace WW {
 
 // ===================================================================
 
-class PersistLogEntry::_Internal {
+class RaftPersistLogEntry::_Internal {
  public:
 };
 
-PersistLogEntry::PersistLogEntry(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+RaftPersistLogEntry::RaftPersistLogEntry(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:WW.PersistLogEntry)
+  // @@protoc_insertion_point(arena_constructor:WW.RaftPersistLogEntry)
 }
-PersistLogEntry::PersistLogEntry(const PersistLogEntry& from)
+RaftPersistLogEntry::RaftPersistLogEntry(const RaftPersistLogEntry& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  PersistLogEntry* const _this = this; (void)_this;
+  RaftPersistLogEntry* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.command_){}
     , decltype(_impl_.term_){}
@@ -143,16 +143,16 @@ PersistLogEntry::PersistLogEntry(const PersistLogEntry& from)
       _this->GetArenaForAllocation());
   }
   _this->_impl_.term_ = from._impl_.term_;
-  // @@protoc_insertion_point(copy_constructor:WW.PersistLogEntry)
+  // @@protoc_insertion_point(copy_constructor:WW.RaftPersistLogEntry)
 }
 
-inline void PersistLogEntry::SharedCtor(
+inline void RaftPersistLogEntry::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.command_){}
-    , decltype(_impl_.term_){0}
+    , decltype(_impl_.term_){int64_t{0}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.command_.InitDefault();
@@ -161,8 +161,8 @@ inline void PersistLogEntry::SharedCtor(
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
-PersistLogEntry::~PersistLogEntry() {
-  // @@protoc_insertion_point(destructor:WW.PersistLogEntry)
+RaftPersistLogEntry::~RaftPersistLogEntry() {
+  // @@protoc_insertion_point(destructor:WW.RaftPersistLogEntry)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -170,43 +170,43 @@ PersistLogEntry::~PersistLogEntry() {
   SharedDtor();
 }
 
-inline void PersistLogEntry::SharedDtor() {
+inline void RaftPersistLogEntry::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.command_.Destroy();
 }
 
-void PersistLogEntry::SetCachedSize(int size) const {
+void RaftPersistLogEntry::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void PersistLogEntry::Clear() {
-// @@protoc_insertion_point(message_clear_start:WW.PersistLogEntry)
+void RaftPersistLogEntry::Clear() {
+// @@protoc_insertion_point(message_clear_start:WW.RaftPersistLogEntry)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   _impl_.command_.ClearToEmpty();
-  _impl_.term_ = 0;
+  _impl_.term_ = int64_t{0};
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* PersistLogEntry::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* RaftPersistLogEntry::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // int32 term = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
-          _impl_.term_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+      // int64 term = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.term_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // bytes command = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+      // bytes command = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_command();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -236,66 +236,66 @@ failure:
 #undef CHK_
 }
 
-uint8_t* PersistLogEntry::_InternalSerialize(
+uint8_t* RaftPersistLogEntry::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:WW.PersistLogEntry)
+  // @@protoc_insertion_point(serialize_to_array_start:WW.RaftPersistLogEntry)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // int32 term = 2;
+  // int64 term = 1;
   if (this->_internal_term() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_term(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_term(), target);
   }
 
-  // bytes command = 3;
+  // bytes command = 2;
   if (!this->_internal_command().empty()) {
     target = stream->WriteBytesMaybeAliased(
-        3, this->_internal_command(), target);
+        2, this->_internal_command(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:WW.PersistLogEntry)
+  // @@protoc_insertion_point(serialize_to_array_end:WW.RaftPersistLogEntry)
   return target;
 }
 
-size_t PersistLogEntry::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:WW.PersistLogEntry)
+size_t RaftPersistLogEntry::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:WW.RaftPersistLogEntry)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // bytes command = 3;
+  // bytes command = 2;
   if (!this->_internal_command().empty()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_command());
   }
 
-  // int32 term = 2;
+  // int64 term = 1;
   if (this->_internal_term() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_term());
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_term());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PersistLogEntry::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData RaftPersistLogEntry::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    PersistLogEntry::MergeImpl
+    RaftPersistLogEntry::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PersistLogEntry::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*RaftPersistLogEntry::GetClassData() const { return &_class_data_; }
 
 
-void PersistLogEntry::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<PersistLogEntry*>(&to_msg);
-  auto& from = static_cast<const PersistLogEntry&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:WW.PersistLogEntry)
+void RaftPersistLogEntry::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<RaftPersistLogEntry*>(&to_msg);
+  auto& from = static_cast<const RaftPersistLogEntry&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:WW.RaftPersistLogEntry)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -309,18 +309,18 @@ void PersistLogEntry::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const 
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void PersistLogEntry::CopyFrom(const PersistLogEntry& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:WW.PersistLogEntry)
+void RaftPersistLogEntry::CopyFrom(const RaftPersistLogEntry& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:WW.RaftPersistLogEntry)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool PersistLogEntry::IsInitialized() const {
+bool RaftPersistLogEntry::IsInitialized() const {
   return true;
 }
 
-void PersistLogEntry::InternalSwap(PersistLogEntry* other) {
+void RaftPersistLogEntry::InternalSwap(RaftPersistLogEntry* other) {
   using std::swap;
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
@@ -332,7 +332,7 @@ void PersistLogEntry::InternalSwap(PersistLogEntry* other) {
   swap(_impl_.term_, other->_impl_.term_);
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata PersistLogEntry::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata RaftPersistLogEntry::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_RaftPersist_2eproto_getter, &descriptor_table_RaftPersist_2eproto_once,
       file_level_metadata_RaftPersist_2eproto[0]);
@@ -340,50 +340,50 @@ void PersistLogEntry::InternalSwap(PersistLogEntry* other) {
 
 // ===================================================================
 
-class PersistData::_Internal {
+class RaftPersistData::_Internal {
  public:
 };
 
-PersistData::PersistData(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+RaftPersistData::RaftPersistData(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:WW.PersistData)
+  // @@protoc_insertion_point(arena_constructor:WW.RaftPersistData)
 }
-PersistData::PersistData(const PersistData& from)
+RaftPersistData::RaftPersistData(const RaftPersistData& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  PersistData* const _this = this; (void)_this;
+  RaftPersistData* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.entries_){from._impl_.entries_}
     , decltype(_impl_.term_){}
     , decltype(_impl_.voted_for_){}
-    , decltype(_impl_.snapshot_index_){}
-    , decltype(_impl_.snapshot_term_){}
+    , decltype(_impl_.last_included_index_){}
+    , decltype(_impl_.last_included_term_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ::memcpy(&_impl_.term_, &from._impl_.term_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.snapshot_term_) -
-    reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.snapshot_term_));
-  // @@protoc_insertion_point(copy_constructor:WW.PersistData)
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.last_included_term_) -
+    reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.last_included_term_));
+  // @@protoc_insertion_point(copy_constructor:WW.RaftPersistData)
 }
 
-inline void PersistData::SharedCtor(
+inline void RaftPersistData::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.entries_){arena}
-    , decltype(_impl_.term_){0}
-    , decltype(_impl_.voted_for_){0}
-    , decltype(_impl_.snapshot_index_){0}
-    , decltype(_impl_.snapshot_term_){0}
+    , decltype(_impl_.term_){int64_t{0}}
+    , decltype(_impl_.voted_for_){int64_t{0}}
+    , decltype(_impl_.last_included_index_){int64_t{0}}
+    , decltype(_impl_.last_included_term_){int64_t{0}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
 
-PersistData::~PersistData() {
-  // @@protoc_insertion_point(destructor:WW.PersistData)
+RaftPersistData::~RaftPersistData() {
+  // @@protoc_insertion_point(destructor:WW.RaftPersistData)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -391,51 +391,51 @@ PersistData::~PersistData() {
   SharedDtor();
 }
 
-inline void PersistData::SharedDtor() {
+inline void RaftPersistData::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.entries_.~RepeatedPtrField();
 }
 
-void PersistData::SetCachedSize(int size) const {
+void RaftPersistData::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void PersistData::Clear() {
-// @@protoc_insertion_point(message_clear_start:WW.PersistData)
+void RaftPersistData::Clear() {
+// @@protoc_insertion_point(message_clear_start:WW.RaftPersistData)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   _impl_.entries_.Clear();
   ::memset(&_impl_.term_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.snapshot_term_) -
-      reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.snapshot_term_));
+      reinterpret_cast<char*>(&_impl_.last_included_term_) -
+      reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.last_included_term_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* PersistData::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* RaftPersistData::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // int32 term = 1;
+      // int64 term = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
-          _impl_.term_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.term_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // int32 voted_for = 2;
+      // int64 voted_for = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
-          _impl_.voted_for_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.voted_for_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // repeated .WW.PersistLogEntry entries = 3;
+      // repeated .WW.RaftPersistLogEntry entries = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr -= 1;
@@ -448,18 +448,18 @@ const char* PersistData::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
         } else
           goto handle_unusual;
         continue;
-      // int32 snapshot_index = 4;
+      // int64 last_included_index = 4;
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
-          _impl_.snapshot_index_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.last_included_index_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // int32 snapshot_term = 5;
+      // int64 last_included_term = 5;
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
-          _impl_.snapshot_term_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          _impl_.last_included_term_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -487,25 +487,25 @@ failure:
 #undef CHK_
 }
 
-uint8_t* PersistData::_InternalSerialize(
+uint8_t* RaftPersistData::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:WW.PersistData)
+  // @@protoc_insertion_point(serialize_to_array_start:WW.RaftPersistData)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // int32 term = 1;
+  // int64 term = 1;
   if (this->_internal_term() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_term(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_term(), target);
   }
 
-  // int32 voted_for = 2;
+  // int64 voted_for = 2;
   if (this->_internal_voted_for() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_voted_for(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(2, this->_internal_voted_for(), target);
   }
 
-  // repeated .WW.PersistLogEntry entries = 3;
+  // repeated .WW.RaftPersistLogEntry entries = 3;
   for (unsigned i = 0,
       n = static_cast<unsigned>(this->_internal_entries_size()); i < n; i++) {
     const auto& repfield = this->_internal_entries(i);
@@ -513,75 +513,75 @@ uint8_t* PersistData::_InternalSerialize(
         InternalWriteMessage(3, repfield, repfield.GetCachedSize(), target, stream);
   }
 
-  // int32 snapshot_index = 4;
-  if (this->_internal_snapshot_index() != 0) {
+  // int64 last_included_index = 4;
+  if (this->_internal_last_included_index() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(4, this->_internal_snapshot_index(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(4, this->_internal_last_included_index(), target);
   }
 
-  // int32 snapshot_term = 5;
-  if (this->_internal_snapshot_term() != 0) {
+  // int64 last_included_term = 5;
+  if (this->_internal_last_included_term() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(5, this->_internal_snapshot_term(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(5, this->_internal_last_included_term(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:WW.PersistData)
+  // @@protoc_insertion_point(serialize_to_array_end:WW.RaftPersistData)
   return target;
 }
 
-size_t PersistData::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:WW.PersistData)
+size_t RaftPersistData::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:WW.RaftPersistData)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .WW.PersistLogEntry entries = 3;
+  // repeated .WW.RaftPersistLogEntry entries = 3;
   total_size += 1UL * this->_internal_entries_size();
   for (const auto& msg : this->_impl_.entries_) {
     total_size +=
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
-  // int32 term = 1;
+  // int64 term = 1;
   if (this->_internal_term() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_term());
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_term());
   }
 
-  // int32 voted_for = 2;
+  // int64 voted_for = 2;
   if (this->_internal_voted_for() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_voted_for());
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_voted_for());
   }
 
-  // int32 snapshot_index = 4;
-  if (this->_internal_snapshot_index() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_snapshot_index());
+  // int64 last_included_index = 4;
+  if (this->_internal_last_included_index() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_last_included_index());
   }
 
-  // int32 snapshot_term = 5;
-  if (this->_internal_snapshot_term() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_snapshot_term());
+  // int64 last_included_term = 5;
+  if (this->_internal_last_included_term() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_last_included_term());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PersistData::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData RaftPersistData::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    PersistData::MergeImpl
+    RaftPersistData::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PersistData::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*RaftPersistData::GetClassData() const { return &_class_data_; }
 
 
-void PersistData::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<PersistData*>(&to_msg);
-  auto& from = static_cast<const PersistData&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:WW.PersistData)
+void RaftPersistData::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<RaftPersistData*>(&to_msg);
+  auto& from = static_cast<const RaftPersistData&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:WW.RaftPersistData)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -593,39 +593,39 @@ void PersistData::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PR
   if (from._internal_voted_for() != 0) {
     _this->_internal_set_voted_for(from._internal_voted_for());
   }
-  if (from._internal_snapshot_index() != 0) {
-    _this->_internal_set_snapshot_index(from._internal_snapshot_index());
+  if (from._internal_last_included_index() != 0) {
+    _this->_internal_set_last_included_index(from._internal_last_included_index());
   }
-  if (from._internal_snapshot_term() != 0) {
-    _this->_internal_set_snapshot_term(from._internal_snapshot_term());
+  if (from._internal_last_included_term() != 0) {
+    _this->_internal_set_last_included_term(from._internal_last_included_term());
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void PersistData::CopyFrom(const PersistData& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:WW.PersistData)
+void RaftPersistData::CopyFrom(const RaftPersistData& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:WW.RaftPersistData)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool PersistData::IsInitialized() const {
+bool RaftPersistData::IsInitialized() const {
   return true;
 }
 
-void PersistData::InternalSwap(PersistData* other) {
+void RaftPersistData::InternalSwap(RaftPersistData* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.entries_.InternalSwap(&other->_impl_.entries_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(PersistData, _impl_.snapshot_term_)
-      + sizeof(PersistData::_impl_.snapshot_term_)
-      - PROTOBUF_FIELD_OFFSET(PersistData, _impl_.term_)>(
+      PROTOBUF_FIELD_OFFSET(RaftPersistData, _impl_.last_included_term_)
+      + sizeof(RaftPersistData::_impl_.last_included_term_)
+      - PROTOBUF_FIELD_OFFSET(RaftPersistData, _impl_.term_)>(
           reinterpret_cast<char*>(&_impl_.term_),
           reinterpret_cast<char*>(&other->_impl_.term_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata PersistData::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata RaftPersistData::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_RaftPersist_2eproto_getter, &descriptor_table_RaftPersist_2eproto_once,
       file_level_metadata_RaftPersist_2eproto[1]);
@@ -634,13 +634,13 @@ void PersistData::InternalSwap(PersistData* other) {
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace WW
 PROTOBUF_NAMESPACE_OPEN
-template<> PROTOBUF_NOINLINE ::WW::PersistLogEntry*
-Arena::CreateMaybeMessage< ::WW::PersistLogEntry >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::WW::PersistLogEntry >(arena);
+template<> PROTOBUF_NOINLINE ::WW::RaftPersistLogEntry*
+Arena::CreateMaybeMessage< ::WW::RaftPersistLogEntry >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::WW::RaftPersistLogEntry >(arena);
 }
-template<> PROTOBUF_NOINLINE ::WW::PersistData*
-Arena::CreateMaybeMessage< ::WW::PersistData >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::WW::PersistData >(arena);
+template<> PROTOBUF_NOINLINE ::WW::RaftPersistData*
+Arena::CreateMaybeMessage< ::WW::RaftPersistData >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::WW::RaftPersistData >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
 

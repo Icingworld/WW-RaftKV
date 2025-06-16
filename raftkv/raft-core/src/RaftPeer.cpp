@@ -5,8 +5,8 @@ namespace WW
 
 RaftPeer::RaftPeer(NodeId _Id)
     : _Id(_Id)
-    , _Next_index(-1)
-    , _Match_index(-1)
+    , _Next_index(1)
+    , _Match_index(0)
 {
 }
 

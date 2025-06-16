@@ -2,18 +2,20 @@ syntax = "proto3";
 
 package WW;
 
-message PersistLogEntry {
-    int32 term = 2;                 // 日志任期
-    bytes command = 3;              // 日志内容
+// 日志条目
+message RaftPersistLogEntry {
+    int64 term = 1;                             // 日志任期
+    bytes command = 2;                          // 日志内容
 }
 
-message PersistData {
+// 持久化数据
+message RaftPersistData {
     // 常规
-    int32 term = 1;                 // 当前节点任期
-    int32 voted_for = 2;            // 向哪个节点投了票
-    repeated PersistLogEntry entries = 3;  // 没有被快照压缩的日志
+    int64 term = 1;                             // 当前节点任期
+    int64 voted_for = 2;                        // 向哪个节点投了票
+    repeated RaftPersistLogEntry entries = 3;   // 没有被快照压缩的日志
 
     // 快照
-    int32 snapshot_index = 4;       // 快照最后一条日志索引
-    int32 snapshot_term = 5;        // 快照最后一条日志任期
+    int64 last_included_index = 4;              // 快照最后一条日志索引
+    int64 last_included_term = 5;               // 快照最后一条日志任期
 }
