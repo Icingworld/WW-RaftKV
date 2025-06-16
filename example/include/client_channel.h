@@ -1,15 +1,23 @@
 #pragma once
 
+#include <memory>
 #include <string>
+#include <atomic>
+#include <cstdint>
+#include <map>
+#include <mutex>
 
+#include <RaftRpcSerialization.h>
 #include <google/protobuf/service.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
+#include <muduo/net/InetAddress.h>
 #include <muduo/net/EventLoop.h>
 #include <muduo/net/TcpClient.h>
+#include <muduo/net/TimerId.h>
 
 /**
- * @brief RpcChannel
+ * @brief ClientChannel
 */
 class ClientChannel : public google::protobuf::RpcChannel
 {
@@ -25,19 +33,22 @@ private:
         const google::protobuf::Message * _Request;
         google::protobuf::Message * _Response;
         google::protobuf::Closure * _Done;
+        muduo::net::TimerId _Timer_id;
     };
 
 private:
-    std::string _Ip;        // 服务端 IP
-    std::string _Port;      // 服务端 PORT
+    muduo::net::InetAddress _Server_addr;                   // 服务端地址
+    std::shared_ptr<muduo::net::EventLoop> _Event_loop;     // muduo 事件循环
+    std::unique_ptr<muduo::net::TcpClient> _Client;         // tcp 客户端
 
-    muduo::net::EventLoop * _Event_loop;      // muduo 事件循环
-    muduo::net::TcpClient * _Client;
+    std::mutex _Mutex;                          // 表锁
+    std::atomic<uint64_t> _Sequence_id;         // 请求序列号
+    std::map<uint64_t, CallMethodContext> _Pending_requests;    // 排队中的请求表
 
 public:
-    ClientChannel(muduo::net::EventLoop * _Loop, const std::string & _Ip, const std::string & _Port);
+    ClientChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port);
 
-    ~ClientChannel() = default;
+    ~ClientChannel();
 
 public:
     /**
@@ -61,6 +72,11 @@ public:
     */
     void connect();
 
+    /**
+     * @brief 断开连接
+    */
+    void disconnect();
+
 private:
     /**
      * @brief 连接事件回调函数
@@ -71,4 +87,10 @@ private:
      * @brief 消息事件回调函数
     */
     void _OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time);
+
+    /**
+     * @brief 超时处理
+     * @param _Sequence_id 请求序列号
+    */
+    void _HandleTimeout(uint64_t _Sequence_id);
 };

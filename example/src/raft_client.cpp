@@ -2,73 +2,82 @@
 #include <iostream>
 #include <memory>
 
+#include <uuid.h>
 #include <client_channel.h>
-#include <RaftOperation.pb.h>
+#include <KVOperation.pb.h>
+#include <RaftRpcController.h>
 #include <RaftRpcClosure.h>
 #include <muduo/base/Logging.h>
 
-void ParseResponse(WW::RaftOperationService_Stub* stub, const WW::RaftOperationRequest& request, const WW::RaftOperationResponse& response)
+void ParseResponse(const WW::KVOperationResponse * _Response, google::protobuf::RpcController * _Controller)
 {
-    bool success = response.success();
-    std::string value = response.value();
-    bool is_leader = response.is_leader();
-    std::string leader_address = response.leader_address();
+    // 读取响应中的信息
+    WW::KVOperationResponse::StatusCode status_code = _Response->status_code();
 
-    if (success) {
-        std::cout << value << std::endl;
-        return;
+    switch (status_code) {
+    case WW::KVOperationResponse_StatusCode_SUCCESS: {
+        std::string value = _Response->payload();
+        std::cout << "success: " << value << std::endl;
+        break;
+    }
+    case WW::KVOperationResponse_StatusCode_CREATED: {
+        std::cout << "success" << std::endl;
+        break;
+    }
+    case WW::KVOperationResponse_StatusCode_REDIRECT: {
+        std::string address = _Response->address();
+        std::cout << "not leader, redirected to: " << address << std::endl;
+        break;
+    }
+    case WW::KVOperationResponse_StatusCode_NOT_FOUND: {
+        std::cout << "key not found" << std::endl;
+        break;
+    }
+    case WW::KVOperationResponse_StatusCode_BAD_REQUEST: {
+        std::cout << "bad request" << std::endl;
+        break;
+    }
+    case WW::KVOperationResponse_StatusCode_INTERNAL_ERROR: {
+        std::cout << "internal error, operation failed" << std::endl;
+        break;
+    }
     }
 
-    if (is_leader) {
-        std::cerr << "something went wrong" << std::endl;
-        return;
-    }
-
-    std::string ip;
-    std::string port;
-    size_t pos = leader_address.find(":");
-
-    if (pos != std::string::npos) {
-        ip = leader_address.substr(0, pos);
-        port = leader_address.substr(pos + 1);
-        std::cout << "leader is at: " << ip << ":" << port << std::endl;
-    } else {
-        std::cerr << "invalid leader address format" << std::endl;
-    }
+    exit(0);
 }
 
-void SendOperationCommand(WW::RaftOperationService_Stub* stub, std::shared_ptr<WW::RaftOperationRequest> request, muduo::net::EventLoop* loop)
+void SendKVOperationCommand(WW::KVOperationService_Stub * stub, std::shared_ptr<WW::KVOperationRequest> request, std::shared_ptr<muduo::net::EventLoop> loop)
 {
-    auto response = std::make_shared<WW::RaftOperationResponse>();
-
-    google::protobuf::Closure* done = new WW::RaftLambdaClosure([=]() {
-        ParseResponse(stub, *request, *response);
-
-        loop->queueInLoop([loop]() {
-            loop->quit();
-        });
-    });
-
-    stub->OperateRaft(nullptr, request.get(), response.get(), done);
+    WW::RaftRpcController * controller = new WW::RaftRpcController();
+    WW::KVOperationResponse * response = new WW::KVOperationResponse();
+    WW::RaftRpcClientClosure1<WW::KVOperationResponse> * closure = new WW::RaftRpcClientClosure1<WW::KVOperationResponse>(controller, response, std::bind(
+        ParseResponse, std::placeholders::_1, std::placeholders::_2
+    ));
+    stub->Execute(controller, request.get(), response, closure);
 }
 
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
-    auto request = std::make_shared<WW::RaftOperationRequest>();
+    std::shared_ptr<WW::KVOperationRequest> request = std::make_shared<WW::KVOperationRequest>();
+
+    // 生成 UUID
+    UUID uuid;
+    WW::Meta * meta = request->mutable_meta();
+    meta->set_uuid(uuid.toString());
 
     if (argc > 1) {
         std::string operation = argv[1];
         if (operation == "put") {
-            request->set_type(WW::CommandType::PUT);
+            request->set_type(WW::OperationType::PUT);
         } else if (operation == "update") {
-            request->set_type(WW::CommandType::UPDATE);
-        } else if (operation == "remove") {
-            request->set_type(WW::CommandType::REMOVE);
+            request->set_type(WW::OperationType::UPDATE);
+        } else if (operation == "delete") {
+            request->set_type(WW::OperationType::DELETE);
         } else if (operation == "get") {
-            request->set_type(WW::CommandType::GET);
+            request->set_type(WW::OperationType::GET);
         } else {
             std::cerr << "invalid operation!" << std::endl;
-            return 1;
+            return -1;
         }
     }
 
@@ -82,27 +91,30 @@ int main(int argc, char** argv)
 
     if (argc > 4) {
         std::cerr << "invalid parameter!" << std::endl;
-        return 1;
+        return -1;
     }
 
+    // 设置 muduo 日志等级
     muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
 
+    // 默认为 node 0 的地址
     std::string ip = "127.0.0.1";
     std::string port = "4397";
 
-    muduo::net::EventLoop event_loop;
+    // 开启事件循环
+    std::shared_ptr<muduo::net::EventLoop> event_loop = std::make_shared<muduo::net::EventLoop>();
 
-    ClientChannel channel(&event_loop, ip, port);
-    WW::RaftOperationService_Stub stub(&channel);
+    ClientChannel channel(event_loop, ip, port);
+    WW::KVOperationService_Stub stub(&channel);
 
     channel.connect();
 
     // runAfter 保证发送操作发生在连接建立之后
-    event_loop.runAfter(0.1, [&stub, request, &event_loop]() {
-        SendOperationCommand(&stub, request, &event_loop);
+    event_loop->runAfter(0.1, [&stub, request, &event_loop]() {
+        SendKVOperationCommand(&stub, request, event_loop);
     });
 
-    event_loop.loop();
+    event_loop->loop();
 
     return 0;
 }
