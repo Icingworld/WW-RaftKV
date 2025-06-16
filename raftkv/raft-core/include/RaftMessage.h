@@ -21,22 +21,25 @@ public:
         RequestVoteResponse,                // 收到投票响应
         InstallSnapshotRequest,             // Leader 向 Follower 发送安装快照请求
         InstallSnapshotResponse,            // 收到安装快照响应
-        TakeSnapshot,                       // 生成快照
+        GenerateSnapshot,                   // 生成快照
         ApplySnapshot,                      // 应用快照
-        LogEntriesApply,                    // 应用日志到状态机
-        OperationRequest,                   // 收到操作请求
-        OPerationResponse                   // 操作响应
+        ApplyCommitLogs,                    // 应用日志到状态机
+        KVOperationRequest,                 // 收到操作请求
+        KVOPerationResponse                 // 操作响应
     };
 
     enum class OperationType
     {
         PUT,
         UPDATE,
-        REMOVE,
+        DELETE,
         GET
     };
 
 public:
+    uint64_t seq;                           // 收到请求的序列号
+    std::string uuid;                       // 客户端 UUID
+
     MessageType type;                       // 消息类型
     NodeId from;                            // 消息来自哪个节点
     NodeId to;                              // 消息送往哪个节点
@@ -45,10 +48,11 @@ public:
     TermId log_term;                        // 日志任期
     LogIndex commit;                        // 提交日志索引
     std::vector<RaftLogEntry> entries;      // 日志条目数组
-    bool reject;                            // 是否拒绝
+    bool success;                           // 是否成功
 
     OperationType op_type;                  // 操作类型
-    std::string command;                    // 操作命令
+    std::string key;                        // 操作键
+    std::string value;                      // 操作值
     std::string snapshot;                   // 快照内容
 };
 

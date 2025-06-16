@@ -1,8 +1,14 @@
 #pragma once
 
-#include <RaftNode.h>
+#include <thread>
+#include <atomic>
+#include <chrono>
+#include <vector>
+
 #include <RaftPeer.h>
-#include <RaftMessage.h>
+#include <RaftChannel.h>
+#include <RaftLogEntry.h>
+#include <Logger.h>
 
 namespace WW
 {
@@ -12,48 +18,85 @@ namespace WW
 */
 class Raft
 {
+public:
+    using raft_time_point = std::chrono::steady_clock::time_point;
+
+public:
+    /**
+     * @brief 节点身份
+    */
+    enum class RaftRole
+    {
+        Follower,           // 追随者
+        Candidate,          // 候选者
+        Leader              // 领导者
+    };
+
 private:
-    // 基本信息
-    RaftNode _Node;                             // Raft 节点
-    std::vector<RaftPeer> _Peers;               // 同伴列表
+    // 节点信息
+    NodeId _Id;             // 节点 ID
+    RaftRole _Role;         // 节点身份
+    TermId _Term;           // 节点任期
+
+    // 选举信息
+    int _Vote_count;        // 选举票数
+    NodeId _Voted_for;      // 投票目标节点
+    NodeId _Leader_id;      // 记录的 Leader ID
+
+    // 日志信息
+    std::vector<RaftLogEntry> _Logs;            // 日志数组
+    LogIndex _Base_index;                       // 日志的逻辑索引
+    LogIndex _Last_log_index;                   // 最新日志的索引
+    TermId _Last_log_term;                      // 最新日志的任期
+    LogIndex _Last_included_index;              // 快照包含的最后一条日志的索引
+    TermId _Last_included_term;                 // 快照包含的最后一条日志的任期
+    LogIndex _Last_commit_index;                // 最新提交日志的索引
+    LogIndex _Last_applied_index;               // 最新应用日志的索引
+
+    // 状态控制
+    bool _Is_applying;                          // 是否正在应用日志
+    bool _Is_snapshoting;                       // 是否正在创建快照
+
+    // 其他节点
+    std::vector<RaftPeer> _Peers;
+
+    // 消息队列
+    RaftChannel _Inner_channel;                 // 内部消息队列
+    RaftChannel _Outter_channel;                // 外部消息队列
 
     // 定时器
     int _Election_timeout_min;                  // 选举定时器最小间隔
     int _Election_timeout_max;                  // 选举定时器最大间隔
-    int _Election_timeout;                      // 选举定时器
-    int _Heartbeat_timeout;                     // 心跳定时器
-    int _Election_interval;                     // 选举间隔
-    int _Heartbeat_interval;                    // 心跳间隔
+    int _Heartbeat_timeout;                     // 心跳超时间隔
+    raft_time_point _Election_deadline;         // 选举超时时间
+    raft_time_point _Heartbeat_deadline;        // 心跳超时时间
 
-    // 选举
-    int _Vote_count;                            // 选举票数
+    // 线程
+    std::atomic<bool> _Running;                 // 是否运行
+    std::thread _Raft_thread;                   // 用于驱动 Raft 时间的线程
+    std::thread _Message_thread;
+    std::mutex _Mutex;
 
-    // 快照
-    bool _Is_snapshoting;                       // 是否正在创建日志
-
-    // 持久化
-    bool _Is_dirty;                             // 数据是否发生变化
-
-    // 消息通道
-    std::vector<RaftMessage> _Inner_messages;   // Raft 内部驱动产生的输出消息
-    RaftMessage _Outter_messages;               // Raft 外部事件驱动产生的输出消息
+    // 日志
+    Logger & _Logger;
 
 public:
     Raft(NodeId _Id, const std::vector<RaftPeer> _Peers);
 
-    ~Raft() = default;
+    ~Raft();
 
 public:
     /**
-     * @brief 加载 Raft 持久化文件
+     * @brief 启动 Raft
     */
-    bool load();
+    void start();
+
+    void startMessage();
 
     /**
-     * @brief 时钟推进
-     * @param _Delta_time 推进时间
+     * @brief 关闭 Raft
     */
-    void tick(int _Delta_time);
+    void stop();
 
     /**
      * @brief 传入消息
@@ -62,55 +105,57 @@ public:
     void step(const RaftMessage & _Message);
 
     /**
-     * @brief 读取 Raft 内部消息输出
+     * @brief 从消息队列中读取消息
     */
-    const std::vector<RaftMessage> & readInnerMessage() const;
+    bool readReady(RaftMessage & _Message, int _Wait_ms);
 
     /**
-     * @brief 读取 Raft 外部消息输出
-    */
-    const RaftMessage & readOutterMessage() const;
-
-    /**
-     * @brief 清空 Raft 内部消息输出
-    */
-    void clearInnerMessage();
-
-    /**
-     * @brief 获取 Raft 节点 ID
+     * @brief 获取本节点 ID
     */
     NodeId getId() const;
 
+    /**
+     * @brief 读取持久化文件
+    */
+    bool loadPersist();
+
 private:
     /**
-     * @brief 选举时间判断
+     * @brief Raft 定时器线程
     */
-    void _TickElection();
+    void _RaftLoop();
 
     /**
-     * @brief 心跳时间判断
+     * @brief 消息队列线程
     */
-    void _TickHeartbeat();
+    void _GetOutterMessage();
 
     /**
-     * @brief 发起选举
+     * @brief 处理消息
     */
-    void _StartElection();
+    void _HandleMessage(const RaftMessage & _Message);
 
     /**
-     * @brief 发送日志同步请求
-     */
-    void _SendAppendEntries(bool _IsHeartbeat);
+     * @brief 转换为 Follower
+     * @param _Leader_id Leader 的节点 ID
+     * @param _Leader_term Leader 的当前任期
+    */
+    void _BecomeFollower(NodeId _Leader_id, TermId _Leader_term);
 
     /**
-     * @brief 重置选举定时器
+     * @brief 转换为 Candidate
     */
-    void _ResetElectionTimeout();
+    void _BecomeCandidate();
 
     /**
-     * @brief 重置心跳定时器
+     * @brief 转换为 Leader
     */
-    void _ResetHeartbeatTimeout();
+    void _BecomeLeader();
+
+    /**
+     * @brief 发送心跳/日志同步
+    */
+    void _SendAppendEntries(bool _Is_heartbeat);
 
     /**
      * @brief 处理接收到的投票请求
@@ -143,31 +188,39 @@ private:
     void _HandleInstallSnapshotResponse(const RaftMessage & _Message);
 
     /**
-     * @brief 处理接收到的操作请求
+     * @brief 处理接收到的客户端操作请求
     */
-    void _HandleOperationRequest(const RaftMessage & _Message);
+    void _HandleKVOperationRequest(const RaftMessage & _Message);
 
     /**
-     * @brief 应用快照
+     * @brief 处理应用层返回的日志提交应用响应
     */
-    void _ApplySnapshot(const RaftMessage & _Message);
+    void _HandleApplyCommitLogs(const RaftMessage & _Message);
 
     /**
-     * @brief 应用已经提交的日志
-     * @param _Commit_index 需要应用到的日志索引
+     * @brief 处理应用层返回的快照生成响应
     */
-    void _ApplyCommitedLogs();
+    void _HandleGenerateSnapshot(const RaftMessage & _Message);
+
+    /**
+     * @brief 处理应用层返回的快照安装响应
+    */
+    void _HandleApplySnapshot(const RaftMessage & _Message);
+
+    /**
+     * @brief 应用已提交日志
+    */
+    void _ApplyCommitLogs();
 
     /**
      * @brief 生成快照
     */
-    void _TakeSnapshot();
+    void _GenerateSnapshot();
 
     /**
      * @brief 检查是否需要生成快照
-     * @param _Index
     */
-    void _CheckIfNeedSnapshot(LogIndex _Index);
+    void _CheckIfNeedSnapshot();
 
     /**
      * @brief 随机生成超时时间
@@ -177,13 +230,26 @@ private:
     */
     int _GetRandomTimeout(int _Timeout_min, int _Timeout_max) const;
 
-    /**
-     * @brief 判断最新日志是否匹配
-    */
-    bool _LogUpToDate(LogIndex _Last_index, TermId _Last_term);
+    void _ResetElectionDeadline();
+
+    void _ResetHeartbeatDeadline();
+
+    TermId _GetTermAt(LogIndex _Index) const;
+
+    bool _LogUpToDate(LogIndex _Last_index, TermId _Last_term) const;
+
+    bool _LogMatch(LogIndex _Index, TermId _Term) const;
+
+    void _TruncateAfter(LogIndex _Truncate_index);
+
+    void _TruncateBefore(LogIndex _Truncate_index);
+
+    const RaftLogEntry & _GetLogAt(LogIndex _Index) const;
+
+    std::vector<RaftLogEntry> _GetLogFrom(LogIndex _Index) const;
 
     /**
-     * @brief 持久化 Raft 状态
+     * @brief 持久化
     */
     void _Persist();
 };

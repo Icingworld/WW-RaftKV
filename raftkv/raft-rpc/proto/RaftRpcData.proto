@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package WW;
+
+// Rpc 传输数据结构
+message RaftRpcData {
+    // 服务标识和方法标识
+    string service_name = 1;        // 服务名
+    string method_name = 2;         // 方法名
+    // 元数据
+    fixed64 sequence_id = 3;        // 请求/响应序列编号
+    // 负载
+    fixed32 payload_size = 4;       // 负载长度
+    fixed32 payload_checksum = 5;   // 负载校验
+    bytes payload = 6;              // 负载
+}

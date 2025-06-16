@@ -1,4 +1,4 @@
-#include "client_channel.h"
+#include "RaftRpcChannel.h"
 
 #include <functional>
 #include <sstream>
@@ -6,37 +6,41 @@
 #include <RaftRpcCRC32.h>
 #include <muduo/net/TcpConnection.h>
 
-using namespace WW;
+namespace WW
+{
 
-ClientChannel::ClientChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port)
-    : _Server_addr(_Ip, std::stoi(_Port))
+RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port)
+    : _Ip(_Ip)
+    , _Port(_Port)
+    , _Server_addr(_Ip, std::stoi(_Port))
     , _Event_loop(_Event_loop)
     , _Client(nullptr)
     , _Mutex()
     , _Sequence_id(1)
     , _Pending_requests()
+    , _Logger(Logger::getSyncLogger("RaftRpc"))
 {
     // 初始化客户端
     _Client = std::unique_ptr<muduo::net::TcpClient>(
-        new muduo::net::TcpClient(_Event_loop.get(), _Server_addr, "ClientChannel")
+        new muduo::net::TcpClient(_Event_loop.get(), _Server_addr, "RaftRpcChannel")
     );
 
     // 绑定回调函数
     _Client->setConnectionCallback(
-        std::bind(&ClientChannel::_OnConnection, this, std::placeholders::_1)
+        std::bind(&RaftRpcChannel::_OnConnection, this, std::placeholders::_1)
     );
 
     _Client->setMessageCallback(
-        std::bind(&ClientChannel::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+        std::bind(&RaftRpcChannel::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     );
 }
 
-ClientChannel::~ClientChannel()
+RaftRpcChannel::~RaftRpcChannel()
 {
     disconnect();
 }
 
-void ClientChannel::CallMethod(const google::protobuf::MethodDescriptor * _Method,
+void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Method,
                                 google::protobuf::RpcController * _Controller,
                                 const google::protobuf::Message * _Request,
                                 google::protobuf::Message * _Response,
@@ -65,6 +69,7 @@ void ClientChannel::CallMethod(const google::protobuf::MethodDescriptor * _Metho
         rpc_str
     )) {
         // 序列化失败，标记失败
+        _Logger.error("request serialization failed");
         _Controller->SetFailed("request serialization failed");
         _Done->Run();
         return;
@@ -94,7 +99,7 @@ void ClientChannel::CallMethod(const google::protobuf::MethodDescriptor * _Metho
         // 绑定超时时间和回调
         context._Timer_id = _Event_loop->runAfter(
             5.0,
-            std::bind(&ClientChannel::_HandleTimeout, this, sequence_id)
+            std::bind(&RaftRpcChannel::_HandleTimeout, this, sequence_id)
         );
 
         // 注册到表中
@@ -107,12 +112,13 @@ void ClientChannel::CallMethod(const google::protobuf::MethodDescriptor * _Metho
         conn->send(request_str);
     } else {
         // 连接未就绪，标记失败
+        _Logger.error("tcp connection not availavble");
         _Controller->SetFailed("tcp connection not availavble");
         _Done->Run();
     }
 }
 
-void ClientChannel::connect()
+void RaftRpcChannel::connect()
 {
     // 连接服务端
     if (_Client != nullptr) {
@@ -120,18 +126,20 @@ void ClientChannel::connect()
     }
 }
 
-void ClientChannel::disconnect()
+void RaftRpcChannel::disconnect()
 {
     if (_Client != nullptr && _Client->connection()) {
         _Client->disconnect();
     }
 }
 
-void ClientChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
+void RaftRpcChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (_Conn->connected()) {
         // 连接建立
+        _Logger.debug("connected to: " + _Ip + ":" + _Port);
     } else {
+        _Logger.debug("connection to: " + _Ip + ":" + _Port + " closed");
         // 连接断开，清理所有等待中的请求
         std::lock_guard<std::mutex> lock(_Mutex);
         for (std::pair<const uint64_t, CallMethodContext> & pair : _Pending_requests) {
@@ -149,7 +157,7 @@ void ClientChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
     }
 }
 
-void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
+void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
     while (_Buffer->readableBytes() >= sizeof(FixedHeader)) {
         FixedHeader header;
@@ -165,6 +173,7 @@ void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo
         if (header.magic_number != 0x0A1B2C3D4E5F6A7B) {
             // 严重错误，清空缓冲区
             _Buffer->retrieveAll();
+            _Logger.error("header magic number not matched");
             return;
         }
 
@@ -173,6 +182,7 @@ void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo
         if (crc != received_checksum) {
             // 校验和验证失败，跳过坏头部
             _Buffer->retrieve(sizeof(header));
+            _Logger.error("header checksum not matched");
             return;
         }
         
@@ -197,6 +207,7 @@ void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo
             sequence_id,
             payload
         )) {
+            _Logger.error("response deserialization failed");
             return;
         }
 
@@ -210,6 +221,7 @@ void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo
 
         // 反序列化负载部分
         if (!context._Response->ParseFromString(payload)) {
+            _Logger.error("parse payload failed");
             context._Controller->SetFailed("parse payload failed");
             context._Done->Run();
             return;
@@ -224,7 +236,7 @@ void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo
     }
 }
 
-void ClientChannel::_HandleTimeout(uint64_t _Sequence_id)
+void RaftRpcChannel::_HandleTimeout(uint64_t _Sequence_id)
 {
     // 查找该请求
     std::lock_guard<std::mutex> lock(_Mutex);
@@ -235,6 +247,7 @@ void ClientChannel::_HandleTimeout(uint64_t _Sequence_id)
     }
 
     // 标记失败
+    _Logger.error("request timeout");
     CallMethodContext & context = it->second;
     context._Controller->SetFailed("request timeout");
 
@@ -243,3 +256,5 @@ void ClientChannel::_HandleTimeout(uint64_t _Sequence_id)
     
     context._Done->Run();
 }
+
+} // namespace WW

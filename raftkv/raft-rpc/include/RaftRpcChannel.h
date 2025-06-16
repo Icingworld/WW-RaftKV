@@ -7,6 +7,7 @@
 #include <map>
 #include <mutex>
 
+#include <Logger.h>
 #include <RaftRpcSerialization.h>
 #include <google/protobuf/service.h>
 #include <google/protobuf/descriptor.h>
@@ -16,10 +17,13 @@
 #include <muduo/net/TcpClient.h>
 #include <muduo/net/TimerId.h>
 
+namespace WW
+{
+
 /**
- * @brief ClientChannel
+ * @brief RpcChannel
 */
-class ClientChannel : public google::protobuf::RpcChannel
+class RaftRpcChannel : public google::protobuf::RpcChannel
 {
 private:
     /**
@@ -37,6 +41,8 @@ private:
     };
 
 private:
+    std::string _Ip;
+    std::string _Port;
     muduo::net::InetAddress _Server_addr;                   // 服务端地址
     std::shared_ptr<muduo::net::EventLoop> _Event_loop;     // muduo 事件循环
     std::unique_ptr<muduo::net::TcpClient> _Client;         // tcp 客户端
@@ -45,10 +51,12 @@ private:
     std::atomic<uint64_t> _Sequence_id;         // 请求序列号
     std::map<uint64_t, CallMethodContext> _Pending_requests;    // 排队中的请求表
 
-public:
-    ClientChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port);
+    Logger & _Logger;
 
-    ~ClientChannel();
+public:
+    RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port);
+
+    ~RaftRpcChannel();
 
 public:
     /**
@@ -94,3 +102,5 @@ private:
     */
     void _HandleTimeout(uint64_t _Sequence_id);
 };
+
+}
