@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package WW;
+
+option cc_generic_services = true;
+
+// 客户端操作类型
+enum OperationType {
+    PUT = 0;                        // 插入
+    UPDATE = 1;                     // 更新
+    DELETE = 2;                     // 删除
+    GET = 3;                        // 读取
+}
+
+message Meta {
+    string uuid = 1;                // 客户端唯一性标识
+}
+
+// 客户端发给节点的请求
+message KVOperationRequest {
+    OperationType type = 1;         // 操作类型
+    Meta meta = 2;                  // 元数据
+    string key = 3;                 // 键
+    string value = 4;               // get/delete 时可为空
+}
+
+// 服务端返回的响应
+message KVOperationResponse {
+    // 状态码
+    enum StatusCode {
+        DEFAULT = 0;                // protobuf 占位符
+        SUCCESS = 200;              // 操作成功
+        CREATED = 201;              // 创建成功
+        REDIRECT = 302;             // 需要重定向
+        BAD_REQUEST = 400;          // 请求错误
+        NOT_FOUND = 404;            // key 不存在
+        INTERNAL_ERROR = 500;       // 服务端内部错误
+    }
+
+    StatusCode status_code = 1;     // 状态码
+    Meta meta = 2;                  // 元数据
+    oneof data {
+        string payload = 3;         // 200 时，返回 GET 值
+        string address = 4;         // 302 时，返回 Leader 地址
+        string reason = 5;          // 400/500 时，返回原因
+    }
+}
+
+// KV 储存操作服务
+service KVOperationService {
+    rpc Execute (KVOperationRequest) returns (KVOperationResponse);
+}
