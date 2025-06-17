@@ -4,12 +4,11 @@
 
 #include <uuid.h>
 #include <client_channel.h>
-#include <KVOperation.pb.h>
 #include <RaftRpcController.h>
 #include <RaftRpcClosure.h>
 #include <muduo/base/Logging.h>
 
-void ParseResponse(const WW::KVOperationResponse * _Response, google::protobuf::RpcController * _Controller)
+void ParseResponse(const WW::KVOperationResponse * _Response, const google::protobuf::RpcController * _Controller)
 {
     // 读取响应中的信息
     WW::KVOperationResponse::StatusCode status_code = _Response->status_code();
@@ -46,19 +45,35 @@ void ParseResponse(const WW::KVOperationResponse * _Response, google::protobuf::
     exit(0);
 }
 
-void SendKVOperationCommand(WW::KVOperationService_Stub * stub, const WW::KVOperationRequest * request, std::shared_ptr<muduo::net::EventLoop> loop)
+void SendKVOperationCommand(WW::KVOperationService_Stub * stub, std::unique_ptr<WW::KVOperationRequest> request, std::shared_ptr<muduo::net::EventLoop> loop)
 {
-    WW::RaftRpcController * controller = new WW::RaftRpcController();
-    WW::KVOperationResponse * response = new WW::KVOperationResponse();
-    WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse> * closure = new WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse>(controller, request, response, std::bind(
-        ParseResponse, std::placeholders::_1, std::placeholders::_2
-    ));
-    stub->Execute(controller, request, response, closure);
+    // 控制器
+    std::unique_ptr<WW::RaftRpcController> controller = std::unique_ptr<WW::RaftRpcController>(
+        new WW::RaftRpcController()
+    );
+    // 响应
+    std::unique_ptr<WW::KVOperationResponse> response = std::unique_ptr<WW::KVOperationResponse>(
+        new WW::KVOperationResponse()
+    );
+
+    // 取出指针
+    WW::RaftRpcController * controller_ptr = controller.get();
+    WW::KVOperationRequest * request_ptr = request.get();
+    WW::KVOperationResponse * response_ptr = response.get();
+
+    WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse> * closure = new WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse>(
+        std::move(controller), std::move(request), std::move(response), std::bind(
+            ParseResponse, std::placeholders::_1, std::placeholders::_2
+        )
+    );
+    stub->Execute(controller_ptr, request_ptr, response_ptr, closure);
 }
 
 int main(int argc, char ** argv)
 {
-    WW::KVOperationRequest * request = new WW::KVOperationRequest();
+    std::unique_ptr<WW::KVOperationRequest> request = std::unique_ptr<WW::KVOperationRequest>(
+        new WW::KVOperationRequest()
+    );
 
     // 生成 UUID
     UUID uuid;
@@ -107,12 +122,13 @@ int main(int argc, char ** argv)
     ClientChannel channel(event_loop, ip, port);
     WW::KVOperationService_Stub stub(&channel);
 
-    channel.connect();
-
-    // runAfter 保证发送操作发生在连接建立之后
-    event_loop->runAfter(0.1, [&stub, request, &event_loop]() {
-        SendKVOperationCommand(&stub, request, event_loop);
+    // 注册连接回调
+    channel.setConnectedCallback([&] {
+        SendKVOperationCommand(&stub, std::move(request), event_loop);
     });
+
+    // 连接服务端
+    channel.connect();
 
     event_loop->loop();
 

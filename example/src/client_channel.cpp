@@ -120,6 +120,11 @@ void ClientChannel::connect()
     }
 }
 
+void ClientChannel::setConnectedCallback(Callback _Callback)
+{
+    this->_Callback = _Callback;
+}
+
 void ClientChannel::disconnect()
 {
     if (_Client != nullptr && _Client->connection()) {
@@ -131,6 +136,7 @@ void ClientChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (_Conn->connected()) {
         // 连接建立
+        _Callback();
     } else {
         // 连接断开，清理所有等待中的请求
         std::lock_guard<std::mutex> lock(_Mutex);
