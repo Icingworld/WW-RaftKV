@@ -46,7 +46,7 @@ private:
     std::string _Ip;
     std::string _Port;
     muduo::net::InetAddress _Server_addr;                       // 服务端地址
-    muduo::net::EventLoop * _Event_loop;                        // muduo 事件循环
+    std::shared_ptr<muduo::net::EventLoop> _Event_loop;         // muduo 事件循环
     std::unique_ptr<muduo::net::TcpClient> _Client;             // tcp 客户端
 
     std::mutex _Mutex;                                          // 表锁
@@ -56,7 +56,7 @@ private:
     Logger & _Logger;
 
 public:
-    RaftRpcChannel(muduo::net::EventLoop * _Event_loop, const std::string & _Ip, const std::string & _Port);
+    RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port);
 
     ~RaftRpcChannel();
 

@@ -92,15 +92,15 @@ private:
 
     void _HandleRequestVoteRequest(const RequestVoteRequest * _Request, google::protobuf::Closure * _Done);
 
-    void _HandleRequestVoteResponse(const RequestVoteResponse * _Response, google::protobuf::RpcController * _Controller);
+    void _HandleRequestVoteResponse(const RequestVoteResponse * _Response, const google::protobuf::RpcController * _Controller);
 
     void _HandleAppendEntriesRequest(const AppendEntriesRequest * _Request, google::protobuf::Closure * _Done);
 
-    void _HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse * _Response, google::protobuf::RpcController * _Controller);
+    void _HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse * _Response, const google::protobuf::RpcController * _Controller);
 
     void _HandleInstallSnapshotRequest(const InstallSnapshotRequest* _Request, google::protobuf::Closure * _Done);
 
-    void _HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse * _Response, google::protobuf::RpcController * _Controller);
+    void _HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse * _Response, const google::protobuf::RpcController * _Controller);
 
     void _HandleKVOperationRequest(const KVOperationRequest * _Request, google::protobuf::Closure * _Done);
 };

@@ -9,7 +9,7 @@
 namespace WW
 {
 
-RaftRpcChannel::RaftRpcChannel(muduo::net::EventLoop * _Event_loop, const std::string & _Ip, const std::string & _Port)
+RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port)
     : _Ip(_Ip)
     , _Port(_Port)
     , _Server_addr(_Ip, std::stoi(_Port))
@@ -22,7 +22,7 @@ RaftRpcChannel::RaftRpcChannel(muduo::net::EventLoop * _Event_loop, const std::s
 {
     // 初始化客户端
     _Client = std::unique_ptr<muduo::net::TcpClient>(
-        new muduo::net::TcpClient(_Event_loop, _Server_addr, "RaftRpcChannel")
+        new muduo::net::TcpClient(_Event_loop.get(), _Server_addr, "RaftRpcChannel")
     );
 
     // 绑定回调函数

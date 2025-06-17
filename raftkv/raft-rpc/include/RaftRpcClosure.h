@@ -1,51 +1,58 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <functional>
 
 #include <RaftRpcCommon.h>
+
 #include <muduo/net/TcpConnection.h>
+
 #include <google/protobuf/service.h>
+#include <google/protobuf/message.h>
 
 namespace WW
 {
 
 /**
  * @brief RaftRpcClosure
+ * @details 拥有控制器、请求和响应的所有权
 */
 template <typename RequestType, typename ResponseType>
 class RaftRpcClientClosure : public google::protobuf::Closure
 {
 public:
-    using ResponseCallback = std::function<void(const ResponseType *, google::protobuf::RpcController *)>;
+    using ResponseCallback = std::function<void(const ResponseType *, const google::protobuf::RpcController *)>;
 
 private:
-    google::protobuf::RpcController * _Controller;
-    const RequestType * _Request;
-    ResponseType * _Response;
+    std::unique_ptr<google::protobuf::RpcController> _Controller;   // 控制器
+    std::unique_ptr<RequestType> _Request;                          // 请求
+    std::unique_ptr<ResponseType> _Response;                        // 响应
     ResponseCallback _Callback;
 
 public:
-    RaftRpcClientClosure(google::protobuf::RpcController * _Controller, const RequestType * _Request, ResponseType * _Response, ResponseCallback _Callback)
-        : _Controller(_Controller)
-        , _Request(_Request)
-        , _Response(_Response)
-        , _Callback(_Callback)
+    RaftRpcClientClosure(std::unique_ptr<google::protobuf::RpcController> _Controller,
+                        std::unique_ptr<RequestType> _Request,
+                        std::unique_ptr<ResponseType> _Response,
+                        ResponseCallback && _Callback)
+        : _Controller(std::move(_Controller))
+        , _Request(std::move(_Request))
+        , _Response(std::move(_Response))
+        , _Callback(std::forward<ResponseCallback>(_Callback))
     {
     }
 
     ~RaftRpcClientClosure()
     {
-        delete _Controller;
-        delete _Request;
-        delete _Response;
     }
 
 public:
     void Run() override
     {
-        _Callback(_Response, _Controller);
+        // 调用回调函数
+        _Callback(_Response.get(), _Controller.get());
 
+        // 析构闭包
         delete this;
     }
 };

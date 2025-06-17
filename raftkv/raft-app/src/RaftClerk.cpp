@@ -62,7 +62,11 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
         // 获取一个 EventLoop
         muduo::net::EventLoop * client_loop = _Event_loop_thread_pool->getNextLoop();
-        _Clients.emplace_back(new RaftRpcClient(client_loop, peer_net.getIp(), peer_net.getPort()));
+        _Clients.emplace_back(new RaftRpcClient(
+            std::shared_ptr<muduo::net::EventLoop>(client_loop),
+            peer_net.getIp(),
+            peer_net.getPort()
+        ));
     }
 
     // 初始化 Raft
@@ -218,15 +222,17 @@ void RaftClerk::_SendRequestVoteRequest(const RaftMessage & _Message)
     // _Logger.debug("to node: " + std::to_string(other_id));
 
     // 构造 Request 消息体
-    RequestVoteRequest * vote_request = new RequestVoteRequest();
-    vote_request->set_term(this_term);
-    vote_request->set_candidate_id(this_id);
-    vote_request->set_last_log_index(this_last_log_index);
-    vote_request->set_last_log_term(this_last_log_term);
+    std::unique_ptr<RequestVoteRequest> request_vote_request = std::unique_ptr<RequestVoteRequest>(
+        new RequestVoteRequest()
+    );
+    request_vote_request->set_term(this_term);
+    request_vote_request->set_candidate_id(this_id);
+    request_vote_request->set_last_log_index(this_last_log_index);
+    request_vote_request->set_last_log_term(this_last_log_term);
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->RequestVote(vote_request, [this](const RequestVoteResponse * _Response, google::protobuf::RpcController * _Controller) {
+    client->RequestVote(std::move(request_vote_request), [this](const RequestVoteResponse * _Response, const google::protobuf::RpcController * _Controller) {
         _HandleRequestVoteResponse(_Response, _Controller);
     });
 }
@@ -268,7 +274,9 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
     // _Logger.debug("this id: " + std::to_string(this_id) + ", term: " + std::to_string(this_term));
 
     // 构造 Request 消息体
-    AppendEntriesRequest * append_entries_request = new AppendEntriesRequest();
+    std::unique_ptr<AppendEntriesRequest> append_entries_request = std::unique_ptr<AppendEntriesRequest>(
+        new AppendEntriesRequest()
+    );
     append_entries_request->set_term(this_term);
     append_entries_request->set_leader_id(this_id);
     append_entries_request->set_prev_log_index(other_prev_log_index);
@@ -284,7 +292,7 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->AppendEntries(append_entries_request, [this, other_id](const AppendEntriesResponse * _Response, google::protobuf::RpcController * _Controller) {
+    client->AppendEntries(std::move(append_entries_request), [this, other_id](const AppendEntriesResponse * _Response, const google::protobuf::RpcController * _Controller) {
         _HandleAppendEntriesResponse(other_id, _Response, _Controller);
     });
 }
@@ -333,16 +341,18 @@ void RaftClerk::_SendInstallSnapshotRequest(const RaftMessage & _Message)
     std::string snapshot_data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
     // 构造 InstallSnapshot 消息体
-    InstallSnapshotRequest * request = new InstallSnapshotRequest();
-    request->set_term(this_term);
-    request->set_leader_id(this_id);
-    request->set_last_included_index(this_last_included_index);
-    request->set_last_included_term(this_last_included_term);
-    request->set_data(snapshot_data);
+    std::unique_ptr<InstallSnapshotRequest> install_snapshot_request = std::unique_ptr<InstallSnapshotRequest>(
+        new InstallSnapshotRequest()
+    );
+    install_snapshot_request->set_term(this_term);
+    install_snapshot_request->set_leader_id(this_id);
+    install_snapshot_request->set_last_included_index(this_last_included_index);
+    install_snapshot_request->set_last_included_term(this_last_included_term);
+    install_snapshot_request->set_data(snapshot_data);
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->InstallSnapshot(request, [this, other_id](const InstallSnapshotResponse * _Response, google::protobuf::RpcController * _Controller) {
+    client->InstallSnapshot(std::move(install_snapshot_request), [this, other_id](const InstallSnapshotResponse * _Response, const google::protobuf::RpcController * _Controller) {
         _HandleInstallSnapshotResponse(other_id, _Response, _Controller);
     });
 }
@@ -719,7 +729,7 @@ void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest * _Request, g
     _Raft->step(message);
 }
 
-void RaftClerk::_HandleRequestVoteResponse(const RequestVoteResponse * _Response, google::protobuf::RpcController * _Controller)
+void RaftClerk::_HandleRequestVoteResponse(const RequestVoteResponse * _Response, const google::protobuf::RpcController * _Controller)
 {
     // 取出响应中的消息
     TermId other_term = _Response->term();
@@ -772,7 +782,7 @@ void RaftClerk::_HandleAppendEntriesRequest(const AppendEntriesRequest * _Reques
     _Raft->step(message);
 }
 
-void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse * _Response, google::protobuf::RpcController * _Controller)
+void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse * _Response, const google::protobuf::RpcController * _Controller)
 {
     // 取出响应中的消息
     TermId other_term = _Response->term();
@@ -819,7 +829,7 @@ void RaftClerk::_HandleInstallSnapshotRequest(const InstallSnapshotRequest* _Req
     _Raft->step(message);
 }
 
-void RaftClerk::_HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse * _Response, google::protobuf::RpcController * _Controller)
+void RaftClerk::_HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse * _Response, const google::protobuf::RpcController * _Controller)
 {
     // 取出响应中的信息
     TermId other_term = _Response->term();
