@@ -57,6 +57,7 @@ void RaftRpcDispatcher::registerService(google::protobuf::Service * _Service)
 void RaftRpcDispatcher::start()
 {
     if (_Server != nullptr) {
+        _Server->setThreadNum(2);
         _Server->start();
         _Logger.debug("rpc server start at: " + _Ip + ":" + _Port);
     }
@@ -239,6 +240,7 @@ void KVOperationDispatcher::registerService(google::protobuf::Service * _Service
 void KVOperationDispatcher::start()
 {
     if (_Server != nullptr) {
+        _Server->setThreadNum(2);
         _Server->start();
         _Logger.debug("kv server start at: " + _Ip + ":" + _Port);
     }

@@ -15,7 +15,8 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     , _Peers(_Peers)
     , _KVStore()
     , _Clients()
-    , _Event_loop(nullptr)
+    , _Event_loop_client(nullptr)
+    , _Event_loop_thread_pool(nullptr)
     , _Rpc_service()
     , _Rpc_server(nullptr)
     , _KVOperation_service()
@@ -40,21 +41,28 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     muduo::Logger::setLogLevel(muduo::Logger::LogLevel::ERROR);
 
     // 初始化 EventLoop
-    _Event_loop = std::shared_ptr<muduo::net::EventLoop>(
-        new muduo::net::EventLoop()
+    _Event_loop_client = std::make_shared<muduo::net::EventLoop>();
+
+    // 初始化 EventLoopThreadPool
+    _Event_loop_thread_pool = std::unique_ptr<muduo::net::EventLoopThreadPool>(
+        new muduo::net::EventLoopThreadPool(_Event_loop_client.get(), "RaftRpcThreadPool")
     );
+    _Event_loop_thread_pool->setThreadNum(2);
+    _Event_loop_thread_pool->start();
 
     // 初始化 RaftPeer 和 client
     std::vector<RaftPeer> peers;
     for (const RaftPeerNet & peer_net : _Peers) {
         peers.emplace_back(peer_net.getId());
-        
+
         if (peer_net.getId() == _Id) {
             _Clients.emplace_back(nullptr);
             continue;
         }
 
-        _Clients.emplace_back(new RaftRpcClient(_Event_loop, peer_net.getIp(), peer_net.getPort()));
+        // 获取一个 EventLoop
+        muduo::net::EventLoop * client_loop = _Event_loop_thread_pool->getNextLoop();
+        _Clients.emplace_back(new RaftRpcClient(client_loop, peer_net.getIp(), peer_net.getPort()));
     }
 
     // 初始化 Raft
@@ -77,7 +85,7 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
     // 初始化 Raft 服务端
     _Rpc_server = std::unique_ptr<RaftRpcServer>(
-        new RaftRpcServer(_Event_loop, _Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Rpc_service)
+        new RaftRpcServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Rpc_service)
     );
 
     // 注册回调函数到 KVOperation Service
@@ -87,7 +95,7 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
     // 初始化 KVOperation 服务端
     _KVOperation_server = std::unique_ptr<KVOperationServer>(
-        new KVOperationServer(_Event_loop, _Peers[_Id].getIp(), _Peers[_Id].getKVPort(), &_KVOperation_service)
+        new KVOperationServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getKVPort(), &_KVOperation_service)
     );
 
     // 从持久化和快照初始化 Raft
@@ -99,19 +107,13 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
 RaftClerk::~RaftClerk()
 {
-
+    _Event_loop_client->quit();
 }
 
 void RaftClerk::start()
 {
-    // 启动 Raft 服务端
-    _Rpc_server->start();
-
-    // 启动 KVOperation 服务端
-    _KVOperation_server->start();
-
     // 延迟 5s 连接所有节点
-    _Event_loop->runAfter(5.0, [this]() {
+    _Event_loop_client->runAfter(5.0, [this]() {
         // 连接所有节点
         for (const RaftPeerNet peer_net : _Peers) {
             if (peer_net.getId() == _Raft->getId()) {
@@ -131,13 +133,18 @@ void RaftClerk::start()
     });
 
     // 延迟 10 秒启动 Raft
-    _Event_loop->runAfter(10.0, [this]() {
+    _Event_loop_client->runAfter(10.0, [this]() {
         // 启动 Raft
         _Raft->start();
     });
 
-    // 启动
-    _Event_loop->loop();
+    // 启动 Raft 服务端
+    _Rpc_server->start();
+    // 启动 KVOperation 服务端
+    _KVOperation_server->start();
+
+    // 启动循环
+    _Event_loop_client->loop();
 }
 
 void RaftClerk::stop()
@@ -219,9 +226,9 @@ void RaftClerk::_SendRequestVoteRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->RequestVote(vote_request, std::bind(
-        &RaftClerk::_HandleRequestVoteResponse, this, std::placeholders::_1, std::placeholders::_2
-    ));
+    client->RequestVote(vote_request, [this](const RequestVoteResponse * _Response, google::protobuf::RpcController * _Controller) {
+        _HandleRequestVoteResponse(_Response, _Controller);
+    });
 }
 
 void RaftClerk::_SendRequestVoteResponse(const RaftMessage & _Message)
@@ -277,9 +284,9 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->AppendEntries(other_id, append_entries_request, std::bind(
-        &RaftClerk::_HandleAppendEntriesResponse, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3
-    ));
+    client->AppendEntries(append_entries_request, [this, other_id](const AppendEntriesResponse * _Response, google::protobuf::RpcController * _Controller) {
+        _HandleAppendEntriesResponse(other_id, _Response, _Controller);
+    });
 }
 
 void RaftClerk::_SendAppendEntriesResponse(const RaftMessage & _Message)
@@ -335,9 +342,9 @@ void RaftClerk::_SendInstallSnapshotRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->InstallSnapshot(other_id, request, std::bind(
-        &RaftClerk::_HandleInstallSnapshotResponse, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3
-    ));
+    client->InstallSnapshot(request, [this, other_id](const InstallSnapshotResponse * _Response, google::protobuf::RpcController * _Controller) {
+        _HandleInstallSnapshotResponse(other_id, _Response, _Controller);
+    });
 }
 
 void RaftClerk::_SendInstallSnapshotResponse(const RaftMessage & _Message)
@@ -703,7 +710,7 @@ void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest * _Request, g
 
     // 取出 Done 中的 sequence_id 并注册
     RaftRpcServerClosure * done = dynamic_cast<RaftRpcServerClosure *>(_Done);
-    uint64_t sequence_id = done->sequence_id();
+    uint64_t sequence_id = done->sequenceId();
     // _Logger.debug("_HandleRequestVoteRequest seq: " + std::to_string(sequence_id));
     message.seq = sequence_id;
     _Pending_requests[sequence_id] = done;
@@ -757,7 +764,7 @@ void RaftClerk::_HandleAppendEntriesRequest(const AppendEntriesRequest * _Reques
 
     // 取出 Done 中的 sequence_id 并注册
     RaftRpcServerClosure * done = dynamic_cast<RaftRpcServerClosure *>(_Done);
-    uint64_t sequence_id = done->sequence_id();
+    uint64_t sequence_id = done->sequenceId();
     message.seq = sequence_id;
     _Pending_requests[sequence_id] = done;
 
@@ -804,7 +811,7 @@ void RaftClerk::_HandleInstallSnapshotRequest(const InstallSnapshotRequest* _Req
 
     // 取出 Done 中的 sequence_id 并注册
     RaftRpcServerClosure * done = dynamic_cast<RaftRpcServerClosure *>(_Done);
-    uint64_t sequence_id = done->sequence_id();
+    uint64_t sequence_id = done->sequenceId();
     message.seq = sequence_id;
     _Pending_requests[sequence_id] = done;
 
@@ -863,7 +870,7 @@ void RaftClerk::_HandleKVOperationRequest(const KVOperationRequest * _Request, g
 
     // 取出 Done 中的 sequence_id 并注册
     RaftRpcServerClosure * done = dynamic_cast<RaftRpcServerClosure *>(_Done);
-    uint64_t sequence_id = done->sequence_id();
+    uint64_t sequence_id = done->sequenceId();
     message.seq = sequence_id;
     std::map<uint64_t, RaftRpcServerClosure *> & client_requests = _Pending_kv_requests[uuid];
     client_requests[sequence_id] = done;

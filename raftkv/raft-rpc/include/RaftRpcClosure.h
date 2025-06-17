@@ -3,6 +3,7 @@
 #include <string>
 #include <functional>
 
+#include <RaftRpcCommon.h>
 #include <muduo/net/TcpConnection.h>
 #include <google/protobuf/service.h>
 
@@ -10,30 +11,33 @@ namespace WW
 {
 
 /**
- * @brief RaftRpcClosure1
+ * @brief RaftRpcClosure
 */
-template <typename ResponseType>
-class RaftRpcClientClosure1 : public google::protobuf::Closure
+template <typename RequestType, typename ResponseType>
+class RaftRpcClientClosure : public google::protobuf::Closure
 {
 public:
     using ResponseCallback = std::function<void(const ResponseType *, google::protobuf::RpcController *)>;
 
 private:
     google::protobuf::RpcController * _Controller;
+    const RequestType * _Request;
     ResponseType * _Response;
     ResponseCallback _Callback;
 
 public:
-    RaftRpcClientClosure1(google::protobuf::RpcController * _Controller, ResponseType * _Response, ResponseCallback _Callback)
+    RaftRpcClientClosure(google::protobuf::RpcController * _Controller, const RequestType * _Request, ResponseType * _Response, ResponseCallback _Callback)
         : _Controller(_Controller)
+        , _Request(_Request)
         , _Response(_Response)
         , _Callback(_Callback)
     {
     }
 
-    ~RaftRpcClientClosure1()
+    ~RaftRpcClientClosure()
     {
         delete _Controller;
+        delete _Request;
         delete _Response;
     }
 
@@ -41,45 +45,6 @@ public:
     void Run() override
     {
         _Callback(_Response, _Controller);
-
-        delete this;
-    }
-};
-
-/**
- * @brief RaftRpcClosure2
-*/
-template <typename ResponseType>
-class RaftRpcClientClosure2 : public google::protobuf::Closure
-{
-public:
-    using ResponseCallback = std::function<void(int, const ResponseType *, google::protobuf::RpcController *)>;
-
-private:
-    int _Id;
-    google::protobuf::RpcController * _Controller;
-    ResponseType * _Response;
-    ResponseCallback _Callback;
-
-public:
-    RaftRpcClientClosure2(int _Id, google::protobuf::RpcController * _Controller, ResponseType * _Response, ResponseCallback _Callback)
-        : _Id(_Id)
-        , _Controller(_Controller)
-        , _Response(_Response)
-        , _Callback(_Callback)
-    {
-    }
-
-    ~RaftRpcClientClosure2()
-    {
-        delete _Controller;
-        delete _Response;
-    }
-
-public:
-    void Run() override
-    {
-        _Callback(_Id, _Response, _Controller);
 
         delete this;
     }
@@ -94,38 +59,29 @@ public:
     using ResponseCallback = std::function<void()>;
 
 private:
-    uint64_t _Sequence_id;
+    SequenceType _Sequence_id;
     google::protobuf::Message * _Response;
     ResponseCallback _Callback;
 
 public:
-    RaftRpcServerClosure(
-            uint64_t _Sequence_id,
-            google::protobuf::Message * _Response,
-            ResponseCallback _Callback
-    )
-        : _Sequence_id(_Sequence_id)
-        , _Response(_Response)
-        , _Callback(std::move(_Callback))
-    {
-    }
+    RaftRpcServerClosure(SequenceType _Sequence_id, google::protobuf::Message * _Response, ResponseCallback _Callback);
 
-    ~RaftRpcServerClosure()
-    {
-        delete _Response;
-    }
+    ~RaftRpcServerClosure();
 
 public:
-    void Run() override
-    {
-        _Callback();
+    void Run() override;
 
-        delete this;
-    }
+    /**
+     * @brief 获取闭包中储存的响应
+     * @return `google::protobuf::Message *`
+    */
+    google::protobuf::Message * response();
 
-    google::protobuf::Message * response() { return _Response; }
-
-    uint64_t sequence_id() const { return _Sequence_id; }
+    /**
+     * @brief 获取闭包中储存的请求序列号
+     * @return 序列号
+    */
+    SequenceType sequenceId() const;
 };
 
 } // namespace WW

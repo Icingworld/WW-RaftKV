@@ -9,7 +9,7 @@
 namespace WW
 {
 
-RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port)
+RaftRpcChannel::RaftRpcChannel(muduo::net::EventLoop * _Event_loop, const std::string & _Ip, const std::string & _Port)
     : _Ip(_Ip)
     , _Port(_Port)
     , _Server_addr(_Ip, std::stoi(_Port))
@@ -22,7 +22,7 @@ RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loo
 {
     // 初始化客户端
     _Client = std::unique_ptr<muduo::net::TcpClient>(
-        new muduo::net::TcpClient(_Event_loop.get(), _Server_addr, "RaftRpcChannel")
+        new muduo::net::TcpClient(_Event_loop, _Server_addr, "RaftRpcChannel")
     );
 
     // 绑定回调函数
@@ -47,7 +47,7 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
                                 google::protobuf::Closure * _Done)
 {
     // 生成序列号
-    uint64_t sequence_id = _Sequence_id.fetch_add(1, std::memory_order_relaxed);
+    SequenceType sequence_id = _Sequence_id.fetch_add(1, std::memory_order_relaxed);
 
     // 构造上下文
     CallMethodContext context {
@@ -96,7 +96,7 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
 
     if (conn != nullptr && conn->connected()) {
         // 连接就绪
-        // 绑定超时时间和回调
+        // 绑定超时时间 5s 和回调函数
         context._Timer_id = _Event_loop->runAfter(
             5.0,
             std::bind(&RaftRpcChannel::_HandleTimeout, this, sequence_id)
@@ -142,7 +142,7 @@ void RaftRpcChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
         _Logger.debug("connection to: " + _Ip + ":" + _Port + " closed");
         // 连接断开，清理所有等待中的请求
         std::lock_guard<std::mutex> lock(_Mutex);
-        for (std::pair<const uint64_t, CallMethodContext> & pair : _Pending_requests) {
+        for (std::pair<const SequenceType, CallMethodContext> & pair : _Pending_requests) {
             CallMethodContext & context = pair.second;
             // 清除定时器
             _Event_loop->cancel(context._Timer_id);
@@ -198,7 +198,7 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         // 反序列化
         std::string service_name;
         std::string method_name;
-        uint64_t sequence_id;
+        SequenceType sequence_id;
         std::string payload;
         if (!RaftRpcSerialization::deserialize(
             packet,
@@ -212,6 +212,7 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         }
 
         // 根据序列号找到该请求上下文
+        std::unique_lock<std::mutex> lock(_Mutex);
         auto it = _Pending_requests.find(sequence_id);
         if (it == _Pending_requests.end()) {
             return;
@@ -231,16 +232,17 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         _Event_loop->cancel(context._Timer_id);
         _Pending_requests.erase(it);
 
+        lock.unlock();
+
         // 调用回调函数通知业务层
         context._Done->Run();
     }
 }
 
-void RaftRpcChannel::_HandleTimeout(uint64_t _Sequence_id)
+void RaftRpcChannel::_HandleTimeout(SequenceType _Sequence_id)
 {
     // 查找该请求
-    std::lock_guard<std::mutex> lock(_Mutex);
-
+    std::unique_lock<std::mutex> lock(_Mutex);
     auto it = _Pending_requests.find(_Sequence_id);
     if (it == _Pending_requests.end()) {
         return;
@@ -253,6 +255,8 @@ void RaftRpcChannel::_HandleTimeout(uint64_t _Sequence_id)
 
     // 清除请求
     _Pending_requests.erase(it);
+
+    lock.unlock();
     
     context._Done->Run();
 }

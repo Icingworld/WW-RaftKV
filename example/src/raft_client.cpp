@@ -46,19 +46,19 @@ void ParseResponse(const WW::KVOperationResponse * _Response, google::protobuf::
     exit(0);
 }
 
-void SendKVOperationCommand(WW::KVOperationService_Stub * stub, std::shared_ptr<WW::KVOperationRequest> request, std::shared_ptr<muduo::net::EventLoop> loop)
+void SendKVOperationCommand(WW::KVOperationService_Stub * stub, const WW::KVOperationRequest * request, std::shared_ptr<muduo::net::EventLoop> loop)
 {
     WW::RaftRpcController * controller = new WW::RaftRpcController();
     WW::KVOperationResponse * response = new WW::KVOperationResponse();
-    WW::RaftRpcClientClosure1<WW::KVOperationResponse> * closure = new WW::RaftRpcClientClosure1<WW::KVOperationResponse>(controller, response, std::bind(
+    WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse> * closure = new WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse>(controller, request, response, std::bind(
         ParseResponse, std::placeholders::_1, std::placeholders::_2
     ));
-    stub->Execute(controller, request.get(), response, closure);
+    stub->Execute(controller, request, response, closure);
 }
 
 int main(int argc, char ** argv)
 {
-    std::shared_ptr<WW::KVOperationRequest> request = std::make_shared<WW::KVOperationRequest>();
+    WW::KVOperationRequest * request = new WW::KVOperationRequest();
 
     // 生成 UUID
     UUID uuid;

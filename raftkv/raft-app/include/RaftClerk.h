@@ -13,6 +13,7 @@
 #include <RaftRpcServer.h>
 #include <RaftRpcClosure.h>
 #include <muduo/net/EventLoop.h>
+#include <muduo/net/EventLoopThreadPool.h>
 
 namespace WW
 {
@@ -33,7 +34,8 @@ private:
     // 客户端
     std::vector<RaftRpcClient *> _Clients;  // Rpc 客户端长连接
     // 服务端
-    std::shared_ptr<muduo::net::EventLoop> _Event_loop;
+    std::shared_ptr<muduo::net::EventLoop> _Event_loop_client;  // 循环
+    std::unique_ptr<muduo::net::EventLoopThreadPool> _Event_loop_thread_pool;   // 客户端专用线程池
     RaftRpcServiceImpl _Rpc_service;                // Raft 服务
     std::unique_ptr<RaftRpcServer> _Rpc_server;     // Raft 服务端
     KVOperationServiceImpl _KVOperation_service;    // KVOperation 服务
