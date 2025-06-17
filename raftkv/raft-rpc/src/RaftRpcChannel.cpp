@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <RaftRpcCRC32.h>
+
 #include <muduo/net/TcpConnection.h>
 
 namespace WW
@@ -33,6 +34,9 @@ RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loo
     _Client->setMessageCallback(
         std::bind(&RaftRpcChannel::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     );
+
+    // 设置自动重连
+    _Client->enableRetry();
 }
 
 RaftRpcChannel::~RaftRpcChannel()
@@ -154,6 +158,9 @@ void RaftRpcChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 
         // 清空表
         _Pending_requests.clear();
+
+        // 等待自动重连
+        _Logger.debug("retrying...");
     }
 }
 

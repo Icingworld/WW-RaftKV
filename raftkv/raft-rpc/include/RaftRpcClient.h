@@ -41,21 +41,21 @@ public:
      * @param _Request 请求消息体
      * @param _Callback 回调函数
     */
-    void RequestVote(std::unique_ptr<RequestVoteRequest> _Request, RequestVoteCallback _Callback);
+    void RequestVote(std::unique_ptr<RequestVoteRequest> _Request, RequestVoteCallback && _Callback);
 
     /**
      * @brief 发起日志同步请求
      * @param _Request 请求消息体
      * @param _Callback 回调函数
     */
-    void AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request, AppendEntriesCallback _Callback);
+    void AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request, AppendEntriesCallback && _Callback);
 
     /**
      * @brief 发起安装快照请求
      * @param _Request 请求消息体
      * @param _Callback 回调函数
     */
-    void InstallSnapshot(std::unique_ptr<InstallSnapshotRequest> _Request, InstallSnapshotCallback _Callback);
+    void InstallSnapshot(std::unique_ptr<InstallSnapshotRequest> _Request, InstallSnapshotCallback && _Callback);
 
     /**
      * @brief 连接 Raft 服务端

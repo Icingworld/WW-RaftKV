@@ -1,7 +1,5 @@
 #include "RaftRpcClient.h"
 
-#include <memory>
-
 #include <RaftRpcController.h>
 
 namespace WW
@@ -21,7 +19,7 @@ RaftRpcClient::~RaftRpcClient()
     disconnect();
 }
 
-void RaftRpcClient::RequestVote(std::unique_ptr<RequestVoteRequest> _Request, RequestVoteCallback _Callback)
+void RaftRpcClient::RequestVote(std::unique_ptr<RequestVoteRequest> _Request, RequestVoteCallback && _Callback)
 {
     // 控制器
     std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
@@ -45,7 +43,7 @@ void RaftRpcClient::RequestVote(std::unique_ptr<RequestVoteRequest> _Request, Re
     _Stub->RequestVote(controller_ptr, request_ptr, response_ptr, closure);
 }
 
-void RaftRpcClient::AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request, AppendEntriesCallback _Callback)
+void RaftRpcClient::AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request, AppendEntriesCallback && _Callback)
 {
     // 控制器
     std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
@@ -69,7 +67,7 @@ void RaftRpcClient::AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request
     _Stub->AppendEntries(controller_ptr, request_ptr, response_ptr, closure);
 }
 
-void RaftRpcClient::InstallSnapshot(std::unique_ptr<InstallSnapshotRequest> _Request, InstallSnapshotCallback _Callback)
+void RaftRpcClient::InstallSnapshot(std::unique_ptr<InstallSnapshotRequest> _Request, InstallSnapshotCallback && _Callback)
 {
     // 控制器
     std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
