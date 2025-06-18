@@ -5,6 +5,7 @@ namespace WW
 
 RaftRpcController::RaftRpcController()
     : _Is_failed(false)
+    , _Is_canceled(false)
     , _Error_text("")
 {
 }
@@ -33,6 +34,7 @@ void RaftRpcController::SetFailed(const std::string & _Reason)
 
 void RaftRpcController::StartCancel()
 {
+    // do nothing
 }
 
 void RaftRpcController::NotifyOnCancel(google::protobuf::Closure * _Callback)

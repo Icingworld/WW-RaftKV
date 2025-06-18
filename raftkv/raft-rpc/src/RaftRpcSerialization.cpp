@@ -1,15 +1,15 @@
 #include "RaftRpcSerialization.h"
 
-#include <arpa/inet.h>
-
 #include <RaftRpcCRC32.h>
+
+#include <arpa/inet.h>
 
 namespace WW
 {
 
 bool RaftRpcSerialization::serialize(const std::string & _Service_name,
                                      const std::string & _Method_name,
-                                     unsigned long long _Sequence_id,
+                                     SequenceType _Sequence_id,
                                      const google::protobuf::Message & _Args,
                                      std::string & _Out_buffer)
 {
@@ -23,7 +23,7 @@ bool RaftRpcSerialization::serialize(const std::string & _Service_name,
     RaftRpcCRC32 & crc32 = RaftRpcCRC32::getRaftRpcCRC32();
 
     // 计算负载校验和
-    uint32_t payload_checksum = crc32.crc32(args_str.c_str(), args_str.size());
+    CRC32Type payload_checksum = crc32.crc32(args_str.c_str(), args_str.size());
 
     // 构造 Rpc 结构
     RaftRpcData rpc_data;
@@ -59,7 +59,7 @@ bool RaftRpcSerialization::deserialize(const std::string & _In_buffer,
 
     // 验证负载校验和
     _Payload = rpc_data.payload();
-    uint32_t payload_checksum = crc32.crc32(_Payload.c_str(), _Payload.size());
+    CRC32Type payload_checksum = crc32.crc32(_Payload.c_str(), _Payload.size());
 
     if (payload_checksum != rpc_data.payload_checksum()) {
         return false;
@@ -71,17 +71,6 @@ bool RaftRpcSerialization::deserialize(const std::string & _In_buffer,
     _Sequence_id = rpc_data.sequence_id();
 
     return true;
-}
-
-uint32_t RaftRpcSerialization::_CalculateHeaderChecksum(const FixedHeader & _Header)
-{
-    char buf[12];   // 共 12 字节
-    memcpy(buf, &_Header.magic_number, sizeof(uint64_t));
-    memcpy(buf + 8, &_Header.total_length, sizeof(uint32_t));
-
-    // 计算 CRC32 校验和
-    RaftRpcCRC32 & crc32 = RaftRpcCRC32::getRaftRpcCRC32();
-    return crc32.crc32(buf, sizeof(buf));
 }
 
 } // namespace WW

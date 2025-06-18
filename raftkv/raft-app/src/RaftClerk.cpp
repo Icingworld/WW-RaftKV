@@ -17,9 +17,9 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     , _Clients()
     , _Event_loop_client(nullptr)
     , _Event_loop_thread_pool(nullptr)
-    , _Rpc_service()
+    , _Rpc_service(nullptr)
     , _Rpc_server(nullptr)
-    , _KVOperation_service()
+    , _KVOperation_service(nullptr)
     , _KVOperation_server(nullptr)
     , _Running(false)
     , _Message_thread()
@@ -74,33 +74,45 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
         new Raft(_Id, peers)
     );
 
+    // 初始化 Raft Service
+    _Rpc_service = std::unique_ptr<RaftRpcServiceImpl>(
+        new RaftRpcServiceImpl()
+    );
+
     // 注册回调函数到 Raft Service
-    _Rpc_service.registerRequestVoteCallback(std::bind(
+    _Rpc_service->registerRequestVoteCallback(std::bind(
         &RaftClerk::_HandleRequestVoteRequest, this, std::placeholders::_1, std::placeholders::_2
     ));
 
-    _Rpc_service.registerAppendEntriesCallback(std::bind(
+    _Rpc_service->registerAppendEntriesCallback(std::bind(
         &RaftClerk::_HandleAppendEntriesRequest, this, std::placeholders::_1, std::placeholders::_2
     ));
 
-    _Rpc_service.registerInstallSnapshotCallback(std::bind(
+    _Rpc_service->registerInstallSnapshotCallback(std::bind(
         &RaftClerk::_HandleInstallSnapshotRequest, this, std::placeholders::_1, std::placeholders::_2
     ));
 
     // 初始化 Raft 服务端
     _Rpc_server = std::unique_ptr<RaftRpcServer>(
-        new RaftRpcServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getPort(), &_Rpc_service)
+        new RaftRpcServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getPort())
+    );
+    _Rpc_server->registerService(std::move(_Rpc_service));
+
+    // 初始化 KVOperation Service
+    _KVOperation_service = std::unique_ptr<KVOperationServiceImpl>(
+        new KVOperationServiceImpl()
     );
 
     // 注册回调函数到 KVOperation Service
-    _KVOperation_service.registerExecuteCallback(std::bind(
+    _KVOperation_service->registerExecuteCallback(std::bind(
         &RaftClerk::_HandleKVOperationRequest, this, std::placeholders::_1, std::placeholders::_2
     ));
 
     // 初始化 KVOperation 服务端
     _KVOperation_server = std::unique_ptr<KVOperationServer>(
-        new KVOperationServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getKVPort(), &_KVOperation_service)
+        new KVOperationServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getKVPort())
     );
+    _KVOperation_server->registerService(std::move(_KVOperation_service));
 
     // 从持久化和快照初始化 Raft
     if (_Raft->loadPersist()) {
@@ -232,9 +244,9 @@ void RaftClerk::_SendRequestVoteRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->RequestVote(std::move(request_vote_request), [this](const RequestVoteResponse * _Response, const google::protobuf::RpcController * _Controller) {
-        _HandleRequestVoteResponse(_Response, _Controller);
-    });
+    client->RequestVote(std::move(request_vote_request), std::bind(
+        &RaftClerk::_HandleRequestVoteResponse, this, std::placeholders::_1, std::placeholders::_2
+    ));
 }
 
 void RaftClerk::_SendRequestVoteResponse(const RaftMessage & _Message)
@@ -292,9 +304,9 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->AppendEntries(std::move(append_entries_request), [this, other_id](const AppendEntriesResponse * _Response, const google::protobuf::RpcController * _Controller) {
-        _HandleAppendEntriesResponse(other_id, _Response, _Controller);
-    });
+    client->AppendEntries(std::move(append_entries_request), std::bind(
+        &RaftClerk::_HandleAppendEntriesResponse, this, other_id, std::placeholders::_1, std::placeholders::_2
+    ));
 }
 
 void RaftClerk::_SendAppendEntriesResponse(const RaftMessage & _Message)
@@ -352,9 +364,9 @@ void RaftClerk::_SendInstallSnapshotRequest(const RaftMessage & _Message)
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->InstallSnapshot(std::move(install_snapshot_request), [this, other_id](const InstallSnapshotResponse * _Response, const google::protobuf::RpcController * _Controller) {
-        _HandleInstallSnapshotResponse(other_id, _Response, _Controller);
-    });
+    client->InstallSnapshot(std::move(install_snapshot_request), std::bind(
+        &RaftClerk::_HandleInstallSnapshotResponse, this, other_id, std::placeholders::_1, std::placeholders::_2
+    ));
 }
 
 void RaftClerk::_SendInstallSnapshotResponse(const RaftMessage & _Message)

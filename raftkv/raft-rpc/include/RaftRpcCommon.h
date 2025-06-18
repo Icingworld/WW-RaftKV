@@ -10,4 +10,6 @@ namespace WW
 */
 using SequenceType = uint64_t;
 
+using CRC32Type = uint32_t;
+
 } // namespace WW

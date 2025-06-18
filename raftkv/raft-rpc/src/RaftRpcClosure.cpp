@@ -3,16 +3,17 @@
 namespace WW
 {
 
-RaftRpcServerClosure::RaftRpcServerClosure(SequenceType _Sequence_id, google::protobuf::Message * _Response, ResponseCallback _Callback)
+RaftRpcServerClosure::RaftRpcServerClosure(SequenceType _Sequence_id,
+                                        std::unique_ptr<google::protobuf::RpcController> _Controller,
+                                        std::unique_ptr<google::protobuf::Message> _Request,
+                                        std::unique_ptr<google::protobuf::Message> _Response,
+                                        ResponseCallback && _Callback)
     : _Sequence_id(_Sequence_id)
-    , _Response(_Response)
+    , _Controller(std::move(_Controller))
+    , _Request(std::move(_Request))
+    , _Response(std::move(_Response))
     , _Callback(std::move(_Callback))
 {
-}
-
-RaftRpcServerClosure::~RaftRpcServerClosure()
-{
-    delete _Response;
 }
 
 void RaftRpcServerClosure::Run()
@@ -24,7 +25,7 @@ void RaftRpcServerClosure::Run()
 
 google::protobuf::Message * RaftRpcServerClosure::response()
 {
-    return _Response;
+    return _Response.get();
 }
 
 SequenceType RaftRpcServerClosure::sequenceId() const

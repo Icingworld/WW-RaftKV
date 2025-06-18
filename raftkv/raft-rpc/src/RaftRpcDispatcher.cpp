@@ -3,8 +3,11 @@
 #include <functional>
 
 #include <RaftRpcCRC32.h>
+#include <RaftRpcSerialization.h>
+#include <RaftRpcFixedHeader.h>
 #include <RaftRpcController.h>
 #include <RaftRpcClosure.h>
+
 #include <muduo/net/InetAddress.h>
 
 namespace WW
@@ -32,9 +35,12 @@ RaftRpcDispatcher::RaftRpcDispatcher(std::shared_ptr<muduo::net::EventLoop> _Eve
     _Server->setMessageCallback(
         std::bind(&RaftRpcDispatcher::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     );
+
+    // 设置服务端线程数
+    _Server->setThreadNum(2);
 }
 
-void RaftRpcDispatcher::registerService(google::protobuf::Service * _Service)
+void RaftRpcDispatcher::registerService(std::unique_ptr<google::protobuf::Service> _Service)
 {
     // 获取服务的元信息
     const google::protobuf::ServiceDescriptor * service_dsc = _Service->GetDescriptor();
@@ -50,14 +56,13 @@ void RaftRpcDispatcher::registerService(google::protobuf::Service * _Service)
     }
 
     // 保存信息
-    info._Service = _Service;
+    info._Service = std::move(_Service);
     _Service_map[service_name] = std::move(info);
 }
 
 void RaftRpcDispatcher::start()
 {
     if (_Server != nullptr) {
-        _Server->setThreadNum(2);
         _Server->start();
         _Logger.debug("rpc server start at: " + _Ip + ":" + _Port);
     }
@@ -66,54 +71,52 @@ void RaftRpcDispatcher::start()
 void RaftRpcDispatcher::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (!_Conn->connected()) {
-        // 连接关闭，断开连接
-        _Conn->shutdown();
+        // 连接关闭
     }
 }
 
 void RaftRpcDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
-    while (_Buffer->readableBytes() >= sizeof(FixedHeader)) {
-        FixedHeader header;
+    while (_Buffer->readableBytes() >= sizeof(RaftRpcFixedHeader)) {
+        RaftRpcFixedHeader header;
         // 取出固定头
         ::memcpy(&header, _Buffer->peek(), sizeof(header));
 
         // 转换为本机序
-        header.magic_number = be64toh(header.magic_number);
-        header.total_length = be32toh(header.total_length);
-        uint32_t received_checksum = be32toh(header.header_checksum);
+        header._Magic_number = be64toh(header._Magic_number);
+        header._Total_length = be32toh(header._Total_length);
+        CRC32Type received_checksum = be32toh(header._Header_checksum);
 
         // 验证魔数
-        if (header.magic_number != 0x0A1B2C3D4E5F6A7B) {
+        if (header._Magic_number != kMagicNumber) {
             // 严重错误，清空缓冲区
-            printf("magic_number: 0x%016lx\n", header.magic_number);
             _Buffer->retrieveAll();
             _Logger.error("header magic number not matched");
             return;
         }
 
         // 验证校验和
-        uint32_t crc = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+        CRC32Type crc = RaftRpcFixedHeader::calculateHeaderChecksum(header);
         if (crc != received_checksum) {
             // 校验和验证失败，跳过坏头部
             _Buffer->retrieve(sizeof(header));
             _Logger.error("header checksum not matched");
             return;
         }
-        
+
         // 检查完整数据包
-        if (_Buffer->readableBytes() < header.total_length) {
+        if (_Buffer->readableBytes() < header._Total_length) {
             // 数据不完整，等待更多数据
             return;
         }
 
-        _Buffer->retrieve(sizeof(FixedHeader));
-        std::string packet = _Buffer->retrieveAsString(header.total_length - sizeof(FixedHeader));
+        _Buffer->retrieve(sizeof(RaftRpcFixedHeader));
+        std::string packet = _Buffer->retrieveAsString(header._Total_length - sizeof(RaftRpcFixedHeader));
 
         // 反序列化
         std::string service_name;
         std::string method_name;
-        uint64_t sequence_id;
+        SequenceType sequence_id;
         std::string payload;
         if (!RaftRpcSerialization::deserialize(
             packet,
@@ -140,7 +143,9 @@ void RaftRpcDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, m
         }
 
         // 根据方法描述符创建请求结构
-        google::protobuf::Message * request = info._Service->GetRequestPrototype(method_it->second).New();
+        std::unique_ptr<google::protobuf::Message> request = std::unique_ptr<google::protobuf::Message>(
+            info._Service->GetRequestPrototype(method_it->second).New()
+        );
 
         // 反序列化 payload
         if (!request->ParseFromString(payload)) {
@@ -149,23 +154,39 @@ void RaftRpcDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, m
         }
 
         // 创建响应结构
-        google::protobuf::Message * response = info._Service->GetResponsePrototype(method_it->second).New();
+        std::unique_ptr<google::protobuf::Message> response = std::unique_ptr<google::protobuf::Message>(
+            info._Service->GetResponsePrototype(method_it->second).New()
+        );
 
-        // 创建 Controller
-        RaftRpcController * controller = new RaftRpcController();
+        // 创建控制器
+        std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
+            new RaftRpcController()
+        );
 
-        // 创建回调函数
-        google::protobuf::Closure * done = new RaftRpcServerClosure(sequence_id, response, [=]() {
-            this->_SendResponse(_Conn, service_name, method_name, sequence_id, response);
+        // 取出指针
+        RaftRpcController * controller_ptr = controller.get();
+        google::protobuf::Message * request_ptr = request.get();
+        google::protobuf::Message * response_ptr = response.get();
+
+        // 创建闭包
+        google::protobuf::Closure * done = new RaftRpcServerClosure(
+            sequence_id, std::move(controller), std::move(request), std::move(response), [=]() {
+            this->_SendResponse(_Conn, service_name, method_name, sequence_id, response_ptr, controller_ptr);
         });
 
-        info._Service->CallMethod(method_it->second, controller, request, nullptr, done);
+        info._Service->CallMethod(method_it->second, controller_ptr, request_ptr, response_ptr, done);
     }
 }
 
 void RaftRpcDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _Conn, const std::string & _Service_name,
-    const std::string & _Method_name, uint64_t _Sequence_id, google::protobuf::Message * _Response)
+                                    const std::string & _Method_name, SequenceType _Sequence_id,
+                                    google::protobuf::Message * _Response, const google::protobuf::RpcController * _Controller)
 {
+    // 检查是否失败
+    if (_Controller->Failed()) {
+        return;
+    }
+
     std::string rpc_str;
     if (!RaftRpcSerialization::serialize(_Service_name, _Method_name, _Sequence_id, *_Response, rpc_str)) {
         // 序列化失败
@@ -173,15 +194,15 @@ void RaftRpcDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _Conn
     }
 
     // 添加固定头
-    FixedHeader header;
-    header.magic_number = 0x0A1B2C3D4E5F6A7B;
-    header.total_length = sizeof(FixedHeader) + rpc_str.size();
+    RaftRpcFixedHeader header;
+    header._Magic_number = 0x0A1B2C3D4E5F6A7B;
+    header._Total_length = sizeof(RaftRpcFixedHeader) + rpc_str.size();
     // 计算校验和
-    uint32_t crc32 = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+    CRC32Type crc32 = RaftRpcFixedHeader::calculateHeaderChecksum(header);
     // 转换为网络序
-    header.magic_number = htobe64(header.magic_number);
-    header.total_length = htobe32(header.total_length);
-    header.header_checksum = htobe32(crc32);
+    header._Magic_number = htobe64(header._Magic_number);
+    header._Total_length = htobe32(header._Total_length);
+    header._Header_checksum = htobe32(crc32);
 
     // 生成固定头字符串
     std::string header_str;
@@ -189,7 +210,6 @@ void RaftRpcDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _Conn
     std::string response_str = header_str + rpc_str;
 
     // 序列化成功，发送响应
-    // _Logger.debug("send response");
     _Conn->send(response_str);
 }
 
@@ -215,9 +235,12 @@ KVOperationDispatcher::KVOperationDispatcher(std::shared_ptr<muduo::net::EventLo
     _Server->setMessageCallback(
         std::bind(&KVOperationDispatcher::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     );
+
+    // 设置线程数
+    _Server->setThreadNum(2);
 }
 
-void KVOperationDispatcher::registerService(google::protobuf::Service * _Service)
+void KVOperationDispatcher::registerService(std::unique_ptr<google::protobuf::Service> _Service)
 {
     // 获取服务的元信息
     const google::protobuf::ServiceDescriptor * service_dsc = _Service->GetDescriptor();
@@ -233,14 +256,13 @@ void KVOperationDispatcher::registerService(google::protobuf::Service * _Service
     }
 
     // 保存信息
-    info._Service = _Service;
+    info._Service = std::move(_Service);
     _Service_map[service_name] = std::move(info);
 }
 
 void KVOperationDispatcher::start()
 {
     if (_Server != nullptr) {
-        _Server->setThreadNum(2);
         _Server->start();
         _Logger.debug("kv server start at: " + _Ip + ":" + _Port);
     }
@@ -249,54 +271,52 @@ void KVOperationDispatcher::start()
 void KVOperationDispatcher::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (!_Conn->connected()) {
-        // 连接关闭，断开连接
-        _Conn->shutdown();
+        // 连接关闭
     }
 }
 
 void KVOperationDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
-    while (_Buffer->readableBytes() >= sizeof(FixedHeader)) {
-        FixedHeader header;
+    while (_Buffer->readableBytes() >= sizeof(RaftRpcFixedHeader)) {
+        RaftRpcFixedHeader header;
         // 取出固定头
         ::memcpy(&header, _Buffer->peek(), sizeof(header));
 
         // 转换为本机序
-        header.magic_number = be64toh(header.magic_number);
-        header.total_length = be32toh(header.total_length);
-        uint32_t received_checksum = be32toh(header.header_checksum);
+        header._Magic_number = be64toh(header._Magic_number);
+        header._Total_length = be32toh(header._Total_length);
+        CRC32Type received_checksum = be32toh(header._Header_checksum);
 
         // 验证魔数
-        if (header.magic_number != 0x0A1B2C3D4E5F6A7B) {
+        if (header._Magic_number != kMagicNumber) {
             // 严重错误，清空缓冲区
-            printf("magic_number: 0x%016lx\n", header.magic_number);
             _Buffer->retrieveAll();
             _Logger.error("header magic number not matched");
             return;
         }
 
         // 验证校验和
-        uint32_t crc = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+        CRC32Type crc = RaftRpcFixedHeader::calculateHeaderChecksum(header);
         if (crc != received_checksum) {
             // 校验和验证失败，跳过坏头部
             _Buffer->retrieve(sizeof(header));
             _Logger.error("header checksum not matched");
             return;
         }
-        
+
         // 检查完整数据包
-        if (_Buffer->readableBytes() < header.total_length) {
+        if (_Buffer->readableBytes() < header._Total_length) {
             // 数据不完整，等待更多数据
             return;
         }
 
-        _Buffer->retrieve(sizeof(FixedHeader));
-        std::string packet = _Buffer->retrieveAsString(header.total_length - sizeof(FixedHeader));
+        _Buffer->retrieve(sizeof(RaftRpcFixedHeader));
+        std::string packet = _Buffer->retrieveAsString(header._Total_length - sizeof(RaftRpcFixedHeader));
 
         // 反序列化
         std::string service_name;
         std::string method_name;
-        uint64_t sequence_id;
+        SequenceType sequence_id;
         std::string payload;
         if (!RaftRpcSerialization::deserialize(
             packet,
@@ -323,7 +343,9 @@ void KVOperationDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Con
         }
 
         // 根据方法描述符创建请求结构
-        google::protobuf::Message * request = info._Service->GetRequestPrototype(method_it->second).New();
+        std::unique_ptr<google::protobuf::Message> request = std::unique_ptr<google::protobuf::Message>(
+            info._Service->GetRequestPrototype(method_it->second).New()
+        );
 
         // 反序列化 payload
         if (!request->ParseFromString(payload)) {
@@ -332,23 +354,39 @@ void KVOperationDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Con
         }
 
         // 创建响应结构
-        google::protobuf::Message * response = info._Service->GetResponsePrototype(method_it->second).New();
+        std::unique_ptr<google::protobuf::Message> response = std::unique_ptr<google::protobuf::Message>(
+            info._Service->GetResponsePrototype(method_it->second).New()
+        );
 
-        // 创建 Controller
-        RaftRpcController * controller = new RaftRpcController();
+        // 创建控制器
+        std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
+            new RaftRpcController()
+        );
 
-        // 创建回调函数
-        google::protobuf::Closure * done = new RaftRpcServerClosure(sequence_id, response, [=]() {
-            this->_SendResponse(_Conn, service_name, method_name, sequence_id, response);
+        // 取出指针
+        RaftRpcController * controller_ptr = controller.get();
+        google::protobuf::Message * request_ptr = request.get();
+        google::protobuf::Message * response_ptr = response.get();
+
+        // 创建闭包
+        google::protobuf::Closure * done = new RaftRpcServerClosure(
+            sequence_id, std::move(controller), std::move(request), std::move(response), [=]() {
+            this->_SendResponse(_Conn, service_name, method_name, sequence_id, response_ptr, controller_ptr);
         });
 
-        info._Service->CallMethod(method_it->second, controller, request, nullptr, done);
+        info._Service->CallMethod(method_it->second, controller_ptr, request_ptr, response_ptr, done);
     }
 }
 
 void KVOperationDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _Conn, const std::string & _Service_name,
-    const std::string & _Method_name, uint64_t _Sequence_id, google::protobuf::Message * _Response)
+                                        const std::string & _Method_name, SequenceType _Sequence_id,
+                                        google::protobuf::Message * _Response, const google::protobuf::RpcController * _Controller)
 {
+    // 检查是否失败
+    if (_Controller->Failed()) {
+        return;
+    }
+
     std::string rpc_str;
     if (!RaftRpcSerialization::serialize(_Service_name, _Method_name, _Sequence_id, *_Response, rpc_str)) {
         // 序列化失败
@@ -356,15 +394,15 @@ void KVOperationDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _
     }
 
     // 添加固定头
-    FixedHeader header;
-    header.magic_number = 0x0A1B2C3D4E5F6A7B;
-    header.total_length = sizeof(FixedHeader) + rpc_str.size();
+    RaftRpcFixedHeader header;
+    header._Magic_number = 0x0A1B2C3D4E5F6A7B;
+    header._Total_length = sizeof(RaftRpcFixedHeader) + rpc_str.size();
     // 计算校验和
-    uint32_t crc32 = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+    CRC32Type crc32 = RaftRpcFixedHeader::calculateHeaderChecksum(header);
     // 转换为网络序
-    header.magic_number = htobe64(header.magic_number);
-    header.total_length = htobe32(header.total_length);
-    header.header_checksum = htobe32(crc32);
+    header._Magic_number = htobe64(header._Magic_number);
+    header._Total_length = htobe32(header._Total_length);
+    header._Header_checksum = htobe32(crc32);
 
     // 生成固定头字符串
     std::string header_str;
@@ -372,7 +410,6 @@ void KVOperationDispatcher::_SendResponse(const muduo::net::TcpConnectionPtr & _
     std::string response_str = header_str + rpc_str;
 
     // 序列化成功，发送响应
-    // _Logger.debug("send response");
     _Conn->send(response_str);
 
     // 采用短链接

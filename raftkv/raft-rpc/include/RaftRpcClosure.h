@@ -38,13 +38,11 @@ public:
         : _Controller(std::move(_Controller))
         , _Request(std::move(_Request))
         , _Response(std::move(_Response))
-        , _Callback(std::forward<ResponseCallback>(_Callback))
+        , _Callback(std::move(_Callback))
     {
     }
 
-    ~RaftRpcClientClosure()
-    {
-    }
+    ~RaftRpcClientClosure() = default;
 
 public:
     void Run() override
@@ -67,13 +65,19 @@ public:
 
 private:
     SequenceType _Sequence_id;
-    google::protobuf::Message * _Response;
+    std::unique_ptr<google::protobuf::RpcController> _Controller;
+    std::unique_ptr<google::protobuf::Message> _Request;
+    std::unique_ptr<google::protobuf::Message> _Response;
     ResponseCallback _Callback;
 
 public:
-    RaftRpcServerClosure(SequenceType _Sequence_id, google::protobuf::Message * _Response, ResponseCallback _Callback);
+    RaftRpcServerClosure(SequenceType _Sequence_id,
+                        std::unique_ptr<google::protobuf::RpcController> _Controller,
+                        std::unique_ptr<google::protobuf::Message> _Request,
+                        std::unique_ptr<google::protobuf::Message> _Response,
+                        ResponseCallback && _Callback);
 
-    ~RaftRpcServerClosure();
+    ~RaftRpcServerClosure() = default;
 
 public:
     void Run() override;

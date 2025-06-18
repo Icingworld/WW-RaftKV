@@ -36,9 +36,9 @@ private:
     // 服务端
     std::shared_ptr<muduo::net::EventLoop> _Event_loop_client;  // 循环
     std::unique_ptr<muduo::net::EventLoopThreadPool> _Event_loop_thread_pool;   // 客户端专用线程池
-    RaftRpcServiceImpl _Rpc_service;                // Raft 服务
+    std::unique_ptr<RaftRpcServiceImpl> _Rpc_service;                // Raft 服务
     std::unique_ptr<RaftRpcServer> _Rpc_server;     // Raft 服务端
-    KVOperationServiceImpl _KVOperation_service;    // KVOperation 服务
+    std::unique_ptr<KVOperationServiceImpl> _KVOperation_service;    // KVOperation 服务
     std::unique_ptr<KVOperationServer> _KVOperation_server; // KVOperation 服务端
 
     // 定时器
