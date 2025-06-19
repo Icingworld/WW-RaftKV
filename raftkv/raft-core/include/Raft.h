@@ -19,9 +19,6 @@ namespace WW
 class Raft
 {
 public:
-    using raft_time_point = std::chrono::steady_clock::time_point;
-
-public:
     /**
      * @brief 节点身份
     */
@@ -68,8 +65,8 @@ private:
     int _Election_timeout_min;                  // 选举定时器最小间隔
     int _Election_timeout_max;                  // 选举定时器最大间隔
     int _Heartbeat_timeout;                     // 心跳超时间隔
-    raft_time_point _Election_deadline;         // 选举超时时间
-    raft_time_point _Heartbeat_deadline;        // 心跳超时时间
+    Timestamp _Election_deadline;               // 选举超时时间
+    Timestamp _Heartbeat_deadline;              // 心跳超时时间
 
     // 线程
     std::atomic<bool> _Running;                 // 是否运行
@@ -100,14 +97,17 @@ public:
 
     /**
      * @brief 传入消息
-     * @details 这是状态机推进的核心接口
     */
-    void step(const RaftMessage & _Message);
+    template <typename RaftMessageType>
+    void step(RaftMessageType && _Message)
+    {
+        _Outter_channel.push(std::forward<RaftMessageType>(_Message));
+    }
 
     /**
      * @brief 从消息队列中读取消息
     */
-    bool readReady(RaftMessage & _Message, int _Wait_ms);
+    std::unique_ptr<RaftMessage> readReady(int _Wait_ms);
 
     /**
      * @brief 获取本节点 ID
@@ -133,7 +133,7 @@ private:
     /**
      * @brief 处理消息
     */
-    void _HandleMessage(const RaftMessage & _Message);
+    void _HandleMessage(std::unique_ptr<RaftMessage> _Message);
 
     /**
      * @brief 转换为 Follower
@@ -160,52 +160,52 @@ private:
     /**
      * @brief 处理接收到的投票请求
     */
-    void _HandleRequestVoteRequest(const RaftMessage & _Message);
+    void _HandleRequestVoteRequest(const RaftRequestVoteRequestMessage * _Message);
 
     /**
      * @brief 处理接收到的投票响应
     */
-    void _HandleRequestVoteResponse(const RaftMessage & _Message);
+    void _HandleRequestVoteResponse(const RaftRequestVoteResponseMessage * _Message);
 
     /**
      * @brief 处理接收到的日志同步请求
     */
-    void _HandleAppendEntriesRequest(const RaftMessage & _Message);
+    void _HandleAppendEntriesRequest(const RaftAppendEntriesRequestMessage * _Message);
 
     /**
      * @brief 处理接收到的日志同步响应
     */
-    void _HandleAppendEntriesResponse(const RaftMessage & _Message);
+    void _HandleAppendEntriesResponse(const RaftAppendEntriesResponseMessage * _Message);
 
     /**
      * @brief 处理接收到的快照安装请求
     */
-    void _HandleInstallSnapshotRequest(const RaftMessage & _Message);
+    void _HandleInstallSnapshotRequest(const RaftInstallSnapshotRequestMessage * _Message);
 
     /**
      * @brief 处理接收到的快照安装响应
     */
-    void _HandleInstallSnapshotResponse(const RaftMessage & _Message);
+    void _HandleInstallSnapshotResponse(const RaftInstallSnapshotResponseMessage * _Message);
 
     /**
      * @brief 处理接收到的客户端操作请求
     */
-    void _HandleKVOperationRequest(const RaftMessage & _Message);
+    void _HandleKVOperationRequest(const KVOperationRequestMessage * _Message);
 
     /**
      * @brief 处理应用层返回的日志提交应用响应
     */
-    void _HandleApplyCommitLogs(const RaftMessage & _Message);
+    void _HandleApplyCommitLogs(const ApplyCommitLogsResponseMessage * _Message);
 
     /**
      * @brief 处理应用层返回的快照生成响应
     */
-    void _HandleGenerateSnapshot(const RaftMessage & _Message);
+    void _HandleGenerateSnapshot(const GenrateSnapshotResponseMessage * _Message);
 
     /**
      * @brief 处理应用层返回的快照安装响应
     */
-    void _HandleApplySnapshot(const RaftMessage & _Message);
+    void _HandleApplySnapshot(const ApplySnapshotResponseMessage * _Message);
 
     /**
      * @brief 应用已提交日志

@@ -169,7 +169,7 @@ void RaftRpcDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, m
         google::protobuf::Message * response_ptr = response.get();
 
         // 创建闭包
-        google::protobuf::Closure * done = new RaftRpcServerClosure(
+        RaftRpcServerClosure * done = new RaftRpcServerClosure(
             sequence_id, std::move(controller), std::move(request), std::move(response), [=]() {
             this->_SendResponse(_Conn, service_name, method_name, sequence_id, response_ptr, controller_ptr);
         });
@@ -369,7 +369,7 @@ void KVOperationDispatcher::_OnMessage(const muduo::net::TcpConnectionPtr & _Con
         google::protobuf::Message * response_ptr = response.get();
 
         // 创建闭包
-        google::protobuf::Closure * done = new RaftRpcServerClosure(
+        RaftRpcServerClosure * done = new RaftRpcServerClosure(
             sequence_id, std::move(controller), std::move(request), std::move(response), [=]() {
             this->_SendResponse(_Conn, service_name, method_name, sequence_id, response_ptr, controller_ptr);
         });

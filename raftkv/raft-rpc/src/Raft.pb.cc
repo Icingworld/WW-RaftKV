@@ -73,7 +73,7 @@ PROTOBUF_CONSTEXPR AppendEntriesRequest::AppendEntriesRequest(
   , /*decltype(_impl_.leader_id_)*/int64_t{0}
   , /*decltype(_impl_.prev_log_index_)*/int64_t{0}
   , /*decltype(_impl_.prev_log_term_)*/int64_t{0}
-  , /*decltype(_impl_.commit_index_)*/int64_t{0}
+  , /*decltype(_impl_.leader_commit_)*/int64_t{0}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AppendEntriesRequestDefaultTypeInternal {
   PROTOBUF_CONSTEXPR AppendEntriesRequestDefaultTypeInternal()
@@ -87,7 +87,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 PROTOBUF_CONSTEXPR AppendEntriesResponse::AppendEntriesResponse(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.term_)*/int64_t{0}
-  , /*decltype(_impl_.index_)*/int64_t{0}
+  , /*decltype(_impl_.last_log_index_)*/int64_t{0}
   , /*decltype(_impl_.success_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct AppendEntriesResponseDefaultTypeInternal {
@@ -175,7 +175,7 @@ const uint32_t TableStruct_Raft_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesRequest, _impl_.prev_log_index_),
   PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesRequest, _impl_.prev_log_term_),
   PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesRequest, _impl_.entries_),
-  PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesRequest, _impl_.commit_index_),
+  PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesRequest, _impl_.leader_commit_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesResponse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -184,7 +184,7 @@ const uint32_t TableStruct_Raft_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pro
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesResponse, _impl_.term_),
   PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesResponse, _impl_.success_),
-  PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesResponse, _impl_.index_),
+  PROTOBUF_FIELD_OFFSET(::WW::AppendEntriesResponse, _impl_.last_log_index_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::WW::InstallSnapshotRequest, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -232,28 +232,28 @@ const char descriptor_table_protodef_Raft_2eproto[] PROTOBUF_SECTION_VARIABLE(pr
   "questVoteRequest\022\014\n\004term\030\001 \001(\003\022\024\n\014candid"
   "ate_id\030\002 \001(\003\022\026\n\016last_log_index\030\003 \001(\003\022\025\n\r"
   "last_log_term\030\004 \001(\003\"9\n\023RequestVoteRespon"
-  "se\022\014\n\004term\030\001 \001(\003\022\024\n\014vote_granted\030\002 \001(\010\"\233"
+  "se\022\014\n\004term\030\001 \001(\003\022\024\n\014vote_granted\030\002 \001(\010\"\234"
   "\001\n\024AppendEntriesRequest\022\014\n\004term\030\001 \001(\003\022\021\n"
   "\tleader_id\030\002 \001(\003\022\026\n\016prev_log_index\030\003 \001(\003"
   "\022\025\n\rprev_log_term\030\004 \001(\003\022\035\n\007entries\030\005 \003(\013"
-  "2\014.WW.LogEntry\022\024\n\014commit_index\030\006 \001(\003\"E\n\025"
-  "AppendEntriesResponse\022\014\n\004term\030\001 \001(\003\022\017\n\007s"
-  "uccess\030\002 \001(\010\022\r\n\005index\030\003 \001(\003\"\236\001\n\026InstallS"
-  "napshotRequest\022\014\n\004term\030\001 \001(\003\022\021\n\tleader_i"
-  "d\030\002 \001(\003\022\016\n\006offset\030\003 \001(\003\022\033\n\023last_included"
-  "_index\030\004 \001(\003\022\032\n\022last_included_term\030\005 \001(\003"
-  "\022\014\n\004data\030\006 \001(\014\022\014\n\004done\030\007 \001(\010\"\'\n\027InstallS"
-  "napshotResponse\022\014\n\004term\030\001 \001(\0032\337\001\n\013RaftSe"
-  "rvice\022>\n\013RequestVote\022\026.WW.RequestVoteReq"
-  "uest\032\027.WW.RequestVoteResponse\022D\n\rAppendE"
-  "ntries\022\030.WW.AppendEntriesRequest\032\031.WW.Ap"
-  "pendEntriesResponse\022J\n\017InstallSnapshot\022\032"
-  ".WW.InstallSnapshotRequest\032\033.WW.InstallS"
-  "napshotResponseB\003\200\001\001b\006proto3"
+  "2\014.WW.LogEntry\022\025\n\rleader_commit\030\006 \001(\003\"N\n"
+  "\025AppendEntriesResponse\022\014\n\004term\030\001 \001(\003\022\017\n\007"
+  "success\030\002 \001(\010\022\026\n\016last_log_index\030\003 \001(\003\"\236\001"
+  "\n\026InstallSnapshotRequest\022\014\n\004term\030\001 \001(\003\022\021"
+  "\n\tleader_id\030\002 \001(\003\022\016\n\006offset\030\003 \001(\003\022\033\n\023las"
+  "t_included_index\030\004 \001(\003\022\032\n\022last_included_"
+  "term\030\005 \001(\003\022\014\n\004data\030\006 \001(\014\022\014\n\004done\030\007 \001(\010\"\'"
+  "\n\027InstallSnapshotResponse\022\014\n\004term\030\001 \001(\0032"
+  "\337\001\n\013RaftService\022>\n\013RequestVote\022\026.WW.Requ"
+  "estVoteRequest\032\027.WW.RequestVoteResponse\022"
+  "D\n\rAppendEntries\022\030.WW.AppendEntriesReque"
+  "st\032\031.WW.AppendEntriesResponse\022J\n\017Install"
+  "Snapshot\022\032.WW.InstallSnapshotRequest\032\033.W"
+  "W.InstallSnapshotResponseB\003\200\001\001b\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_Raft_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_Raft_2eproto = {
-    false, false, 908, descriptor_table_protodef_Raft_2eproto,
+    false, false, 918, descriptor_table_protodef_Raft_2eproto,
     "Raft.proto",
     &descriptor_table_Raft_2eproto_once, nullptr, 0, 7,
     schemas, file_default_instances, TableStruct_Raft_2eproto::offsets,
@@ -1017,13 +1017,13 @@ AppendEntriesRequest::AppendEntriesRequest(const AppendEntriesRequest& from)
     , decltype(_impl_.leader_id_){}
     , decltype(_impl_.prev_log_index_){}
     , decltype(_impl_.prev_log_term_){}
-    , decltype(_impl_.commit_index_){}
+    , decltype(_impl_.leader_commit_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ::memcpy(&_impl_.term_, &from._impl_.term_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.commit_index_) -
-    reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.commit_index_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.leader_commit_) -
+    reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.leader_commit_));
   // @@protoc_insertion_point(copy_constructor:WW.AppendEntriesRequest)
 }
 
@@ -1037,7 +1037,7 @@ inline void AppendEntriesRequest::SharedCtor(
     , decltype(_impl_.leader_id_){int64_t{0}}
     , decltype(_impl_.prev_log_index_){int64_t{0}}
     , decltype(_impl_.prev_log_term_){int64_t{0}}
-    , decltype(_impl_.commit_index_){int64_t{0}}
+    , decltype(_impl_.leader_commit_){int64_t{0}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -1068,8 +1068,8 @@ void AppendEntriesRequest::Clear() {
 
   _impl_.entries_.Clear();
   ::memset(&_impl_.term_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.commit_index_) -
-      reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.commit_index_));
+      reinterpret_cast<char*>(&_impl_.leader_commit_) -
+      reinterpret_cast<char*>(&_impl_.term_)) + sizeof(_impl_.leader_commit_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1124,10 +1124,10 @@ const char* AppendEntriesRequest::_InternalParse(const char* ptr, ::_pbi::ParseC
         } else
           goto handle_unusual;
         continue;
-      // int64 commit_index = 6;
+      // int64 leader_commit = 6;
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
-          _impl_.commit_index_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          _impl_.leader_commit_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -1193,10 +1193,10 @@ uint8_t* AppendEntriesRequest::_InternalSerialize(
         InternalWriteMessage(5, repfield, repfield.GetCachedSize(), target, stream);
   }
 
-  // int64 commit_index = 6;
-  if (this->_internal_commit_index() != 0) {
+  // int64 leader_commit = 6;
+  if (this->_internal_leader_commit() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(6, this->_internal_commit_index(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(6, this->_internal_leader_commit(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1242,9 +1242,9 @@ size_t AppendEntriesRequest::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_prev_log_term());
   }
 
-  // int64 commit_index = 6;
-  if (this->_internal_commit_index() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_commit_index());
+  // int64 leader_commit = 6;
+  if (this->_internal_leader_commit() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_leader_commit());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -1278,8 +1278,8 @@ void AppendEntriesRequest::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, c
   if (from._internal_prev_log_term() != 0) {
     _this->_internal_set_prev_log_term(from._internal_prev_log_term());
   }
-  if (from._internal_commit_index() != 0) {
-    _this->_internal_set_commit_index(from._internal_commit_index());
+  if (from._internal_leader_commit() != 0) {
+    _this->_internal_set_leader_commit(from._internal_leader_commit());
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -1300,8 +1300,8 @@ void AppendEntriesRequest::InternalSwap(AppendEntriesRequest* other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.entries_.InternalSwap(&other->_impl_.entries_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(AppendEntriesRequest, _impl_.commit_index_)
-      + sizeof(AppendEntriesRequest::_impl_.commit_index_)
+      PROTOBUF_FIELD_OFFSET(AppendEntriesRequest, _impl_.leader_commit_)
+      + sizeof(AppendEntriesRequest::_impl_.leader_commit_)
       - PROTOBUF_FIELD_OFFSET(AppendEntriesRequest, _impl_.term_)>(
           reinterpret_cast<char*>(&_impl_.term_),
           reinterpret_cast<char*>(&other->_impl_.term_));
@@ -1330,7 +1330,7 @@ AppendEntriesResponse::AppendEntriesResponse(const AppendEntriesResponse& from)
   AppendEntriesResponse* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.term_){}
-    , decltype(_impl_.index_){}
+    , decltype(_impl_.last_log_index_){}
     , decltype(_impl_.success_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -1347,7 +1347,7 @@ inline void AppendEntriesResponse::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.term_){int64_t{0}}
-    , decltype(_impl_.index_){int64_t{0}}
+    , decltype(_impl_.last_log_index_){int64_t{0}}
     , decltype(_impl_.success_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -1404,10 +1404,10 @@ const char* AppendEntriesResponse::_InternalParse(const char* ptr, ::_pbi::Parse
         } else
           goto handle_unusual;
         continue;
-      // int64 index = 3;
+      // int64 last_log_index = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
-          _impl_.index_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          _impl_.last_log_index_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -1453,10 +1453,10 @@ uint8_t* AppendEntriesResponse::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_success(), target);
   }
 
-  // int64 index = 3;
-  if (this->_internal_index() != 0) {
+  // int64 last_log_index = 3;
+  if (this->_internal_last_log_index() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(3, this->_internal_index(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(3, this->_internal_last_log_index(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1480,9 +1480,9 @@ size_t AppendEntriesResponse::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_term());
   }
 
-  // int64 index = 3;
-  if (this->_internal_index() != 0) {
-    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_index());
+  // int64 last_log_index = 3;
+  if (this->_internal_last_log_index() != 0) {
+    total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_last_log_index());
   }
 
   // bool success = 2;
@@ -1511,8 +1511,8 @@ void AppendEntriesResponse::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, 
   if (from._internal_term() != 0) {
     _this->_internal_set_term(from._internal_term());
   }
-  if (from._internal_index() != 0) {
-    _this->_internal_set_index(from._internal_index());
+  if (from._internal_last_log_index() != 0) {
+    _this->_internal_set_last_log_index(from._internal_last_log_index());
   }
   if (from._internal_success() != 0) {
     _this->_internal_set_success(from._internal_success());

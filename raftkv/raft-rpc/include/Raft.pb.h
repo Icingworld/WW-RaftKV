@@ -722,7 +722,7 @@ class AppendEntriesRequest final :
     kLeaderIdFieldNumber = 2,
     kPrevLogIndexFieldNumber = 3,
     kPrevLogTermFieldNumber = 4,
-    kCommitIndexFieldNumber = 6,
+    kLeaderCommitFieldNumber = 6,
   };
   // repeated .WW.LogEntry entries = 5;
   int entries_size() const;
@@ -778,13 +778,13 @@ class AppendEntriesRequest final :
   void _internal_set_prev_log_term(int64_t value);
   public:
 
-  // int64 commit_index = 6;
-  void clear_commit_index();
-  int64_t commit_index() const;
-  void set_commit_index(int64_t value);
+  // int64 leader_commit = 6;
+  void clear_leader_commit();
+  int64_t leader_commit() const;
+  void set_leader_commit(int64_t value);
   private:
-  int64_t _internal_commit_index() const;
-  void _internal_set_commit_index(int64_t value);
+  int64_t _internal_leader_commit() const;
+  void _internal_set_leader_commit(int64_t value);
   public:
 
   // @@protoc_insertion_point(class_scope:WW.AppendEntriesRequest)
@@ -800,7 +800,7 @@ class AppendEntriesRequest final :
     int64_t leader_id_;
     int64_t prev_log_index_;
     int64_t prev_log_term_;
-    int64_t commit_index_;
+    int64_t leader_commit_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -930,7 +930,7 @@ class AppendEntriesResponse final :
 
   enum : int {
     kTermFieldNumber = 1,
-    kIndexFieldNumber = 3,
+    kLastLogIndexFieldNumber = 3,
     kSuccessFieldNumber = 2,
   };
   // int64 term = 1;
@@ -942,13 +942,13 @@ class AppendEntriesResponse final :
   void _internal_set_term(int64_t value);
   public:
 
-  // int64 index = 3;
-  void clear_index();
-  int64_t index() const;
-  void set_index(int64_t value);
+  // int64 last_log_index = 3;
+  void clear_last_log_index();
+  int64_t last_log_index() const;
+  void set_last_log_index(int64_t value);
   private:
-  int64_t _internal_index() const;
-  void _internal_set_index(int64_t value);
+  int64_t _internal_last_log_index() const;
+  void _internal_set_last_log_index(int64_t value);
   public:
 
   // bool success = 2;
@@ -969,7 +969,7 @@ class AppendEntriesResponse final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     int64_t term_;
-    int64_t index_;
+    int64_t last_log_index_;
     bool success_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -1771,24 +1771,24 @@ AppendEntriesRequest::entries() const {
   return _impl_.entries_;
 }
 
-// int64 commit_index = 6;
-inline void AppendEntriesRequest::clear_commit_index() {
-  _impl_.commit_index_ = int64_t{0};
+// int64 leader_commit = 6;
+inline void AppendEntriesRequest::clear_leader_commit() {
+  _impl_.leader_commit_ = int64_t{0};
 }
-inline int64_t AppendEntriesRequest::_internal_commit_index() const {
-  return _impl_.commit_index_;
+inline int64_t AppendEntriesRequest::_internal_leader_commit() const {
+  return _impl_.leader_commit_;
 }
-inline int64_t AppendEntriesRequest::commit_index() const {
-  // @@protoc_insertion_point(field_get:WW.AppendEntriesRequest.commit_index)
-  return _internal_commit_index();
+inline int64_t AppendEntriesRequest::leader_commit() const {
+  // @@protoc_insertion_point(field_get:WW.AppendEntriesRequest.leader_commit)
+  return _internal_leader_commit();
 }
-inline void AppendEntriesRequest::_internal_set_commit_index(int64_t value) {
+inline void AppendEntriesRequest::_internal_set_leader_commit(int64_t value) {
   
-  _impl_.commit_index_ = value;
+  _impl_.leader_commit_ = value;
 }
-inline void AppendEntriesRequest::set_commit_index(int64_t value) {
-  _internal_set_commit_index(value);
-  // @@protoc_insertion_point(field_set:WW.AppendEntriesRequest.commit_index)
+inline void AppendEntriesRequest::set_leader_commit(int64_t value) {
+  _internal_set_leader_commit(value);
+  // @@protoc_insertion_point(field_set:WW.AppendEntriesRequest.leader_commit)
 }
 
 // -------------------------------------------------------------------
@@ -1835,24 +1835,24 @@ inline void AppendEntriesResponse::set_success(bool value) {
   // @@protoc_insertion_point(field_set:WW.AppendEntriesResponse.success)
 }
 
-// int64 index = 3;
-inline void AppendEntriesResponse::clear_index() {
-  _impl_.index_ = int64_t{0};
+// int64 last_log_index = 3;
+inline void AppendEntriesResponse::clear_last_log_index() {
+  _impl_.last_log_index_ = int64_t{0};
 }
-inline int64_t AppendEntriesResponse::_internal_index() const {
-  return _impl_.index_;
+inline int64_t AppendEntriesResponse::_internal_last_log_index() const {
+  return _impl_.last_log_index_;
 }
-inline int64_t AppendEntriesResponse::index() const {
-  // @@protoc_insertion_point(field_get:WW.AppendEntriesResponse.index)
-  return _internal_index();
+inline int64_t AppendEntriesResponse::last_log_index() const {
+  // @@protoc_insertion_point(field_get:WW.AppendEntriesResponse.last_log_index)
+  return _internal_last_log_index();
 }
-inline void AppendEntriesResponse::_internal_set_index(int64_t value) {
+inline void AppendEntriesResponse::_internal_set_last_log_index(int64_t value) {
   
-  _impl_.index_ = value;
+  _impl_.last_log_index_ = value;
 }
-inline void AppendEntriesResponse::set_index(int64_t value) {
-  _internal_set_index(value);
-  // @@protoc_insertion_point(field_set:WW.AppendEntriesResponse.index)
+inline void AppendEntriesResponse::set_last_log_index(int64_t value) {
+  _internal_set_last_log_index(value);
+  // @@protoc_insertion_point(field_set:WW.AppendEntriesResponse.last_log_index)
 }
 
 // -------------------------------------------------------------------

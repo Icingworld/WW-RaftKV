@@ -66,27 +66,27 @@ public:
 private:
     void _GetInnerMessage();
 
-    void _HandleMessage(const RaftMessage & _Message);
+    void _HandleMessage(std::unique_ptr<RaftMessage> _Message);
 
-    void _SendRequestVoteRequest(const RaftMessage & _Message);
+    void _SendRequestVoteRequest(const RaftRequestVoteRequestMessage * _Message);
 
-    void _SendRequestVoteResponse(const RaftMessage & _Message);
+    void _SendRequestVoteResponse(const RaftRequestVoteResponseMessage * _Message);
 
-    void _SendAppendEntriesRequest(const RaftMessage & _Message);
+    void _SendAppendEntriesRequest(const RaftAppendEntriesRequestMessage * _Message);
 
-    void _SendAppendEntriesResponse(const RaftMessage & _Message);
+    void _SendAppendEntriesResponse(const RaftAppendEntriesResponseMessage * _Message);
 
-    void _SendInstallSnapshotRequest(const RaftMessage & _Message);
+    void _SendInstallSnapshotRequest(const RaftInstallSnapshotRequestMessage * _Message);
 
-    void _SendInstallSnapshotResponse(const RaftMessage & _Message);
+    void _SendInstallSnapshotResponse(const RaftInstallSnapshotResponseMessage * _Message);
 
-    void _SendKVOperationResponse(const RaftMessage & _Message);
+    void _SendKVOperationResponse(const KVOperationResponseMessage * _Message);
 
-    void _ApplyCommitLogs(const RaftMessage & _Message);
+    void _ApplyCommitLogs(const ApplyCommitLogsRequestMessage * _Message);
 
-    void _ApplySnapshot(const RaftMessage & _Message);
+    void _ApplySnapshot(const ApplySnapshotRequestMessage * _Message);
 
-    void _GenerateSnapshot(const RaftMessage & _Message);
+    void _GenerateSnapshot(const GenrateSnapshotRequestMessage * _Message);
 
     void _InstallSnapshotFromPersist();
 
