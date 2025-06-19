@@ -233,7 +233,7 @@ void RaftClerk::_HandleMessage(std::unique_ptr<RaftMessage> _Message)
         break;
     }
     case RaftMessage::MessageType::GenerateSnapshotRequest: {
-        const GenrateSnapshotRequestMessage * generate_snapshot_request_message = static_cast<const GenrateSnapshotRequestMessage *>(_Message.get());
+        const GenerateSnapshotRequestMessage * generate_snapshot_request_message = static_cast<const GenerateSnapshotRequestMessage *>(_Message.get());
         _GenerateSnapshot(generate_snapshot_request_message);
         break;
     }
@@ -474,7 +474,6 @@ void RaftClerk::_ApplyCommitLogs(const ApplyCommitLogsRequestMessage * _Message)
 
     // 构造上下文
     ApplyCommitLogsResponseMessage apply_commit_logs_response_message;
-    apply_commit_logs_response_message.type = RaftMessage::MessageType::ApplyCommitLogsResponse;
 
     // 开始解析并应用日志条目
     for (const RaftLogEntry & entry : entries) {
@@ -578,7 +577,6 @@ void RaftClerk::_ApplySnapshot(const ApplySnapshotRequestMessage * _Message)
 
     // 构造上下文
     ApplySnapshotResponseMessage apply_snapshot_response_message;
-    apply_snapshot_response_message.type = RaftMessage::MessageType::ApplySnapshotResponse;
     apply_snapshot_response_message.seq = sequence_id;
 
     // 先将快照保存到本地
@@ -642,15 +640,14 @@ void RaftClerk::_ApplySnapshot(const ApplySnapshotRequestMessage * _Message)
     _Raft->step(std::move(apply_snapshot_response_message));
 }
 
-void RaftClerk::_GenerateSnapshot(const GenrateSnapshotRequestMessage * _Message)
+void RaftClerk::_GenerateSnapshot(const GenerateSnapshotRequestMessage * _Message)
 {
     // 读取上下文信息
     LogIndex last_applied_index = _Message->last_applied_index;
     TermId last_applied_term = _Message->last_applied_term;
 
     // 构造上下文
-    GenrateSnapshotResponseMessage generate_snapshot_response_message;
-    generate_snapshot_response_message.type = RaftMessage::MessageType::GenerateSnapshotResponse;
+    GenerateSnapshotResponseMessage generate_snapshot_response_message;
 
     // 开始创建快照
     RaftSnapshotData snapshot_data;
@@ -743,7 +740,6 @@ void RaftClerk::_HandleRequestVoteRequest(const RequestVoteRequest * _Request, g
 
     // 构造上下文
     RaftRequestVoteRequestMessage request_vote_request_message;
-    request_vote_request_message.type = RaftMessage::MessageType::RequestVoteRequest;
     request_vote_request_message.from = other_id;
     request_vote_request_message.term = other_term;
     request_vote_request_message.last_log_index = other_last_log_index;
@@ -767,7 +763,6 @@ void RaftClerk::_HandleRequestVoteResponse(const RequestVoteResponse * _Response
 
     // 构造上下文
     RaftRequestVoteResponseMessage request_vote_response_message;
-    request_vote_response_message.type = RaftMessage::MessageType::RequestVoteResponse;
     request_vote_response_message.term = other_term;
     request_vote_response_message.vote_granted = other_vote_granted;
 
@@ -789,7 +784,6 @@ void RaftClerk::_HandleAppendEntriesRequest(const AppendEntriesRequest * _Reques
 
     // 构造上下文
     RaftAppendEntriesRequestMessage append_entries_request_message;
-    append_entries_request_message.type = RaftMessage::MessageType::AppendEntriesRequest;
     append_entries_request_message.term = other_term;
     append_entries_request_message.from = other_id;
     append_entries_request_message.prev_log_index = other_prev_log_index;
@@ -820,7 +814,6 @@ void RaftClerk::_HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResp
 
     // 构造上下文
     RaftAppendEntriesResponseMessage append_entries_response_message;
-    append_entries_response_message.type = RaftMessage::MessageType::AppendEntriesResponse;
     append_entries_response_message.from = _Id;
     append_entries_response_message.term = other_term;
     append_entries_response_message.success = other_success;
@@ -841,7 +834,6 @@ void RaftClerk::_HandleInstallSnapshotRequest(const InstallSnapshotRequest* _Req
 
     // 构造上下文
     RaftInstallSnapshotRequestMessage install_snapshot_request_message;
-    install_snapshot_request_message.type = RaftMessage::MessageType::InstallSnapshotRequest;
     install_snapshot_request_message.from = other_id;
     install_snapshot_request_message.term = other_term;
     install_snapshot_request_message.last_included_index = other_last_included_index;
@@ -865,7 +857,6 @@ void RaftClerk::_HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshot
 
     // 构造上下文
     RaftInstallSnapshotResponseMessage install_snapshot_response_message;
-    install_snapshot_response_message.type = RaftMessage::MessageType::InstallSnapshotResponse;
     install_snapshot_response_message.term = other_term;
     install_snapshot_response_message.from = _Id;
 
@@ -885,7 +876,6 @@ void RaftClerk::_HandleKVOperationRequest(const KVOperationRequest * _Request, g
 
     // 构造上下文
     KVOperationRequestMessage kv_operation_request_message;
-    kv_operation_request_message.type = RaftMessage::MessageType::KVOperationRequest;
     kv_operation_request_message.uuid = std::move(uuid);
     kv_operation_request_message.key = std::move(key);
     kv_operation_request_message.value = std::move(value);

@@ -86,7 +86,7 @@ private:
 
     void _ApplySnapshot(const ApplySnapshotRequestMessage * _Message);
 
-    void _GenerateSnapshot(const GenrateSnapshotRequestMessage * _Message);
+    void _GenerateSnapshot(const GenerateSnapshotRequestMessage * _Message);
 
     void _InstallSnapshotFromPersist();
 

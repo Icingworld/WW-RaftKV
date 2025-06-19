@@ -200,7 +200,7 @@ private:
     /**
      * @brief 处理应用层返回的快照生成响应
     */
-    void _HandleGenerateSnapshot(const GenrateSnapshotResponseMessage * _Message);
+    void _HandleGenerateSnapshot(const GenerateSnapshotResponseMessage * _Message);
 
     /**
      * @brief 处理应用层返回的快照安装响应

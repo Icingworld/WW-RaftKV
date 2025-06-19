@@ -173,7 +173,7 @@ void Raft::_HandleMessage(std::unique_ptr<RaftMessage> _Message)
         break;
     }
     case RaftMessage::MessageType::GenerateSnapshotResponse: {
-        const GenrateSnapshotResponseMessage * generate_snapshot_response_message = static_cast<const GenrateSnapshotResponseMessage *>(_Message.get());
+        const GenerateSnapshotResponseMessage * generate_snapshot_response_message = static_cast<const GenerateSnapshotResponseMessage *>(_Message.get());
         _HandleGenerateSnapshot(generate_snapshot_response_message);
         break;
     }
@@ -214,7 +214,6 @@ void Raft::_BecomeCandidate()
 
         // 构造上下文
         RaftRequestVoteRequestMessage request_vote_request_message;
-        request_vote_request_message.type = RaftMessage::MessageType::RequestVoteRequest;
         request_vote_request_message.from = _Id;
         request_vote_request_message.term = _Term;
         request_vote_request_message.last_log_index = _Last_log_index;
@@ -267,7 +266,6 @@ void Raft::_SendAppendEntries(bool _Is_heartbeat)
             // 落后太多，需要发送快照
             _Logger.debug("node: " + std::to_string(peer.getId()) + " too far behind, send install snapshot");
             RaftInstallSnapshotRequestMessage install_snapshot_request_message;
-            install_snapshot_request_message.type = RaftMessage::MessageType::InstallSnapshotRequest;
             install_snapshot_request_message.term = _Term;
             install_snapshot_request_message.from = _Id;
             install_snapshot_request_message.to = peer.getId();
@@ -279,7 +277,6 @@ void Raft::_SendAppendEntries(bool _Is_heartbeat)
             // 正常发送心跳/日志同步
             // 构造上下文
             RaftAppendEntriesRequestMessage append_entries_request_message;
-            append_entries_request_message.type = RaftMessage::MessageType::AppendEntriesRequest;
             append_entries_request_message.term = _Term;
             append_entries_request_message.from = _Id;
             append_entries_request_message.to = peer.getId();
@@ -312,7 +309,6 @@ void Raft::_HandleRequestVoteRequest(const RaftRequestVoteRequestMessage * _Mess
 
     // 构造响应上下文
     RaftRequestVoteResponseMessage request_vote_response_message;
-    request_vote_response_message.type = RaftMessage::MessageType::RequestVoteResponse;
     request_vote_response_message.seq = sequence_id;
     request_vote_response_message.term = _Term;
     request_vote_response_message.vote_granted = false;
@@ -407,7 +403,6 @@ void Raft::_HandleAppendEntriesRequest(const RaftAppendEntriesRequestMessage * _
 
     // 构造并设置响应消息
     RaftAppendEntriesResponseMessage append_entries_response_message;
-    append_entries_response_message.type = RaftMessage::MessageType::AppendEntriesResponse;
     append_entries_response_message.seq = sequence_id;
     append_entries_response_message.from = _Id;
     append_entries_response_message.term = _Term;
@@ -557,7 +552,6 @@ void Raft::_HandleInstallSnapshotRequest(const RaftInstallSnapshotRequestMessage
 
     // 构造并设置响应上下文
     RaftInstallSnapshotResponseMessage install_snapshot_response_message;
-    install_snapshot_response_message.type = RaftMessage::MessageType::InstallSnapshotResponse;
     install_snapshot_response_message.seq = sequence_id;
 
     // 1. 比较节点任期
@@ -592,7 +586,6 @@ void Raft::_HandleInstallSnapshotRequest(const RaftInstallSnapshotRequestMessage
 
     // 同意安装快照
     ApplySnapshotRequestMessage apply_snapshot_request_message;
-    apply_snapshot_request_message.type = RaftMessage::MessageType::ApplySnapshotRequest;
     apply_snapshot_request_message.seq = sequence_id;
     apply_snapshot_request_message.last_included_index = other_last_included_index;
     apply_snapshot_request_message.last_included_term = other_last_included_term;
@@ -657,7 +650,7 @@ void Raft::_HandleApplyCommitLogs(const ApplyCommitLogsResponseMessage * _Messag
     _CheckIfNeedSnapshot();
 }
 
-void Raft::_HandleGenerateSnapshot(const GenrateSnapshotResponseMessage * _Message)
+void Raft::_HandleGenerateSnapshot(const GenerateSnapshotResponseMessage * _Message)
 {
     // 读取上下文信息
     LogIndex last_included_index = _Message->last_applied_index;
@@ -692,7 +685,6 @@ void Raft::_HandleApplySnapshot(const ApplySnapshotResponseMessage * _Message)
 
     // 构造响应上下文
     RaftInstallSnapshotResponseMessage install_snapshot_response_message;
-    install_snapshot_response_message.type = RaftMessage::MessageType::InstallSnapshotResponse;
     install_snapshot_response_message.seq = sequence_id;
 
     // 判断是否安装快照成功
@@ -728,7 +720,6 @@ void Raft::_HandleKVOperationRequest(const KVOperationRequestMessage * _Message)
 
     // 构造上下文
     KVOperationResponseMessage kv_operation_response_message;
-    kv_operation_response_message.type = RaftMessage::MessageType::KVOPerationResponse;
     kv_operation_response_message.uuid = std::move(uuid);
     kv_operation_response_message.key = std::move(key);
     kv_operation_response_message.value = std::move(value);
@@ -798,7 +789,6 @@ void Raft::_ApplyCommitLogs()
 
     // 构造应用上下文
     ApplyCommitLogsRequestMessage apply_commit_logs_request_message;
-    apply_commit_logs_request_message.type = RaftMessage::MessageType::ApplyCommitLogsRequest;
     apply_commit_logs_request_message.last_commit_index = _Last_commit_index;
 
     for (LogIndex i = _Last_applied_index + 1; i <= _Last_commit_index; ++i) {
@@ -823,8 +813,7 @@ int Raft::_GetRandomTimeout(int _Timeout_min, int _Timeout_max) const
 void Raft::_GenerateSnapshot()
 {
     // 构造上下文
-    GenrateSnapshotRequestMessage generate_snapshot_request_message;
-    generate_snapshot_request_message.type = RaftMessage::MessageType::GenerateSnapshotRequest;
+    GenerateSnapshotRequestMessage generate_snapshot_request_message;
     generate_snapshot_request_message.last_applied_index = _Last_applied_index;
     generate_snapshot_request_message.last_applied_term = _GetTermAt(_Last_applied_index);
 
