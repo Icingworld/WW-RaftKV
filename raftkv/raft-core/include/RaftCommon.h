@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 
 namespace WW
 {
@@ -26,5 +27,10 @@ using TermId = std::size_t;
  * @brief 时间戳
 */
 using Timestamp = std::chrono::steady_clock::time_point;
+
+/**
+ * @brief 序列号
+*/
+using SequenceType = uint64_t;
 
 } // namespace WW

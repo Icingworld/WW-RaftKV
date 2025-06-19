@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include <RaftRpcClosure.h>
 #include <RaftRpcChannel.h>
 #include <Raft.pb.h>
 
@@ -13,6 +14,15 @@ namespace WW
 */
 class RaftRpcClient
 {
+public:
+    using RequestVoteClosure = RaftRpcClientClosure<RequestVoteRequest, RequestVoteResponse>;
+    using AppendEntriesClosure = RaftRpcClientClosure<AppendEntriesRequest, AppendEntriesResponse>;
+    using InstallSnapshotClosure = RaftRpcClientClosure<InstallSnapshotRequest, InstallSnapshotResponse>;
+
+    using RequestVoteCallback = typename RequestVoteClosure::ResponseCallback;
+    using AppendEntriesCallback = typename AppendEntriesClosure::ResponseCallback;
+    using InstallSnapshotCallback = typename InstallSnapshotClosure::ResponseCallback;
+
 private:
     std::shared_ptr<muduo::net::EventLoop> _Event_loop;
     std::string _Ip;
@@ -28,27 +38,24 @@ public:
 public:
     /**
      * @brief 发起投票请求
-     * @param request 请求消息体
-     * @param callback 回调函数
+     * @param _Request 请求消息体
+     * @param _Callback 回调函数
     */
-    void RequestVote(const RequestVoteRequest * _Request,
-                     std::function<void(const RequestVoteResponse *, google::protobuf::RpcController *)> _Callback);
+    void RequestVote(std::unique_ptr<RequestVoteRequest> _Request, RequestVoteCallback && _Callback);
 
     /**
-     * @brief 发起日志条目请求
-     * @param request 请求消息体
-     * @param callback 回调函数
+     * @brief 发起日志同步请求
+     * @param _Request 请求消息体
+     * @param _Callback 回调函数
     */
-    void AppendEntries(int _Id, const AppendEntriesRequest * _Request,
-                       std::function<void(int, const AppendEntriesResponse *, google::protobuf::RpcController *)> _Callback);
+    void AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request, AppendEntriesCallback && _Callback);
 
     /**
      * @brief 发起安装快照请求
-     * @param request 请求消息体
-     * @param callback 回调函数
+     * @param _Request 请求消息体
+     * @param _Callback 回调函数
     */
-    void InstallSnapshot(int _Id, const InstallSnapshotRequest * _Request,
-                         std::function<void(int, const InstallSnapshotResponse *, google::protobuf::RpcController *)> _Callback);
+    void InstallSnapshot(std::unique_ptr<InstallSnapshotRequest> _Request, InstallSnapshotCallback && _Callback);
 
     /**
      * @brief 连接 Raft 服务端

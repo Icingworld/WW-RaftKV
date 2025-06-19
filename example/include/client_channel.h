@@ -11,6 +11,7 @@
 #include <google/protobuf/service.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
+#include <KVOperation.pb.h>
 #include <muduo/net/InetAddress.h>
 #include <muduo/net/EventLoop.h>
 #include <muduo/net/TcpClient.h>
@@ -21,6 +22,9 @@
 */
 class ClientChannel : public google::protobuf::RpcChannel
 {
+public:
+    using Callback = std::function<void()>;
+
 private:
     /**
      * @brief 调用方法的上下文
@@ -44,6 +48,8 @@ private:
     std::mutex _Mutex;                          // 表锁
     std::atomic<uint64_t> _Sequence_id;         // 请求序列号
     std::map<uint64_t, CallMethodContext> _Pending_requests;    // 排队中的请求表
+
+    Callback _Callback;
 
 public:
     ClientChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port);
@@ -76,6 +82,11 @@ public:
      * @brief 断开连接
     */
     void disconnect();
+
+    /**
+     * @brief 设置连接回调函数
+    */
+    void setConnectedCallback(Callback _Callback);
 
 private:
     /**

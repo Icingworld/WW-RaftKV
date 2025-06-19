@@ -3,7 +3,9 @@
 #include <functional>
 #include <sstream>
 
+#include <RaftRpcFixedHeader.h>
 #include <RaftRpcCRC32.h>
+
 #include <muduo/net/TcpConnection.h>
 
 namespace WW
@@ -33,6 +35,9 @@ RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loo
     _Client->setMessageCallback(
         std::bind(&RaftRpcChannel::_OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     );
+
+    // 设置自动重连
+    _Client->enableRetry();
 }
 
 RaftRpcChannel::~RaftRpcChannel()
@@ -47,7 +52,7 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
                                 google::protobuf::Closure * _Done)
 {
     // 生成序列号
-    uint64_t sequence_id = _Sequence_id.fetch_add(1, std::memory_order_relaxed);
+    SequenceType sequence_id = _Sequence_id.fetch_add(1, std::memory_order_relaxed);
 
     // 构造上下文
     CallMethodContext context {
@@ -76,15 +81,15 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
     }
 
     // 构造一个固定头
-    FixedHeader header;
-    header.magic_number = 0x0A1B2C3D4E5F6A7B;
-    header.total_length = sizeof(FixedHeader) + rpc_str.size();
+    RaftRpcFixedHeader header;
+    header._Magic_number = kMagicNumber;
+    header._Total_length = sizeof(RaftRpcFixedHeader) + rpc_str.size();
     // 计算校验和
-    uint32_t crc32 = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+    CRC32Type crc32 = RaftRpcFixedHeader::calculateHeaderChecksum(header);
     // 转换为网络序
-    header.magic_number = htobe64(header.magic_number);
-    header.total_length = htobe32(header.total_length);
-    header.header_checksum = htobe32(crc32);
+    header._Magic_number = htobe64(header._Magic_number);
+    header._Total_length = htobe32(header._Total_length);
+    header._Header_checksum = htobe32(crc32);
 
     // 生成固定头字符串
     std::string header_str;
@@ -96,7 +101,7 @@ void RaftRpcChannel::CallMethod(const google::protobuf::MethodDescriptor * _Meth
 
     if (conn != nullptr && conn->connected()) {
         // 连接就绪
-        // 绑定超时时间和回调
+        // 绑定超时时间 5s 和回调函数
         context._Timer_id = _Event_loop->runAfter(
             5.0,
             std::bind(&RaftRpcChannel::_HandleTimeout, this, sequence_id)
@@ -142,7 +147,7 @@ void RaftRpcChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
         _Logger.debug("connection to: " + _Ip + ":" + _Port + " closed");
         // 连接断开，清理所有等待中的请求
         std::lock_guard<std::mutex> lock(_Mutex);
-        for (std::pair<const uint64_t, CallMethodContext> & pair : _Pending_requests) {
+        for (std::pair<const SequenceType, CallMethodContext> & pair : _Pending_requests) {
             CallMethodContext & context = pair.second;
             // 清除定时器
             _Event_loop->cancel(context._Timer_id);
@@ -154,23 +159,26 @@ void RaftRpcChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 
         // 清空表
         _Pending_requests.clear();
+
+        // 等待自动重连
+        _Logger.debug("retrying...");
     }
 }
 
 void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
-    while (_Buffer->readableBytes() >= sizeof(FixedHeader)) {
-        FixedHeader header;
+    while (_Buffer->readableBytes() >= sizeof(RaftRpcFixedHeader)) {
+        RaftRpcFixedHeader header;
         // 取出固定头
         ::memcpy(&header, _Buffer->peek(), sizeof(header));
 
         // 字节序转换
-        header.magic_number = be64toh(header.magic_number);
-        header.total_length = be32toh(header.total_length);
-        uint32_t received_checksum = be32toh(header.header_checksum);
+        header._Magic_number = be64toh(header._Magic_number);
+        header._Total_length = be32toh(header._Total_length);
+        CRC32Type received_checksum = be32toh(header._Header_checksum);
 
         // 验证魔数
-        if (header.magic_number != 0x0A1B2C3D4E5F6A7B) {
+        if (header._Magic_number != kMagicNumber) {
             // 严重错误，清空缓冲区
             _Buffer->retrieveAll();
             _Logger.error("header magic number not matched");
@@ -178,7 +186,7 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         }
 
         // 验证校验和
-        uint32_t crc = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+        CRC32Type crc = RaftRpcFixedHeader::calculateHeaderChecksum(header);
         if (crc != received_checksum) {
             // 校验和验证失败，跳过坏头部
             _Buffer->retrieve(sizeof(header));
@@ -187,18 +195,18 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         }
         
         // 检查完整数据包
-        if (_Buffer->readableBytes() < header.total_length) {
+        if (_Buffer->readableBytes() < header._Total_length) {
             // 数据不完整，等待更多数据
             return;
         }
 
-        _Buffer->retrieve(sizeof(FixedHeader));
-        std::string packet = _Buffer->retrieveAsString(header.total_length - sizeof(FixedHeader));
+        _Buffer->retrieve(sizeof(RaftRpcFixedHeader));
+        std::string packet = _Buffer->retrieveAsString(header._Total_length - sizeof(RaftRpcFixedHeader));
 
         // 反序列化
         std::string service_name;
         std::string method_name;
-        uint64_t sequence_id;
+        SequenceType sequence_id;
         std::string payload;
         if (!RaftRpcSerialization::deserialize(
             packet,
@@ -212,6 +220,7 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         }
 
         // 根据序列号找到该请求上下文
+        std::unique_lock<std::mutex> lock(_Mutex);
         auto it = _Pending_requests.find(sequence_id);
         if (it == _Pending_requests.end()) {
             return;
@@ -231,16 +240,17 @@ void RaftRpcChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, mudu
         _Event_loop->cancel(context._Timer_id);
         _Pending_requests.erase(it);
 
+        lock.unlock();
+
         // 调用回调函数通知业务层
         context._Done->Run();
     }
 }
 
-void RaftRpcChannel::_HandleTimeout(uint64_t _Sequence_id)
+void RaftRpcChannel::_HandleTimeout(SequenceType _Sequence_id)
 {
     // 查找该请求
-    std::lock_guard<std::mutex> lock(_Mutex);
-
+    std::unique_lock<std::mutex> lock(_Mutex);
     auto it = _Pending_requests.find(_Sequence_id);
     if (it == _Pending_requests.end()) {
         return;
@@ -253,6 +263,8 @@ void RaftRpcChannel::_HandleTimeout(uint64_t _Sequence_id)
 
     // 清除请求
     _Pending_requests.erase(it);
+
+    lock.unlock();
     
     context._Done->Run();
 }

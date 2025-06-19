@@ -3,13 +3,6 @@
 namespace WW
 {
 
-RaftRpcServiceImpl::RaftRpcServiceImpl()
-    : _RequestVoteCallback()
-    , _AppendEntriesCallback()
-    , _InstallSnapshotCallback()
-{
-}
-
 void RaftRpcServiceImpl::RequestVote(google::protobuf::RpcController * _Controller,
                                      const RequestVoteRequest * _Request,
                                      RequestVoteResponse * _Response,
@@ -34,24 +27,19 @@ void RaftRpcServiceImpl::InstallSnapshot(google::protobuf::RpcController * _Cont
     _InstallSnapshotCallback(_Request, _Done);
 }
 
-void RaftRpcServiceImpl::registerRequestVoteCallback(RequestVoteCallback _Callback)
+void RaftRpcServiceImpl::registerRequestVoteCallback(RequestVoteCallback && _Callback)
 {
-    _RequestVoteCallback = _Callback;
+    _RequestVoteCallback = std::move(_Callback);
 }
 
-void RaftRpcServiceImpl::registerAppendEntriesCallback(AppendEntriesCallback _Callback)
+void RaftRpcServiceImpl::registerAppendEntriesCallback(AppendEntriesCallback && _Callback)
 {
-    _AppendEntriesCallback = _Callback;
+    _AppendEntriesCallback = std::move(_Callback);
 }
 
-void RaftRpcServiceImpl::registerInstallSnapshotCallback(InstallSnapshotCallback _Callback)
+void RaftRpcServiceImpl::registerInstallSnapshotCallback(InstallSnapshotCallback && _Callback)
 {
-    _InstallSnapshotCallback = _Callback;
-}
-
-KVOperationServiceImpl::KVOperationServiceImpl()
-    : _ExecuteCallback()
-{
+    _InstallSnapshotCallback = std::move(_Callback);
 }
 
 void KVOperationServiceImpl::Execute(google::protobuf::RpcController * _Controller,
@@ -62,9 +50,9 @@ void KVOperationServiceImpl::Execute(google::protobuf::RpcController * _Controll
     _ExecuteCallback(_Request, _Done);
 }
 
-void KVOperationServiceImpl::registerExecuteCallback(ExecuteCallback _Callback)
+void KVOperationServiceImpl::registerExecuteCallback(ExecuteCallback && _Callback)
 {
-    _ExecuteCallback = _Callback;
+    _ExecuteCallback = std::move(_Callback);
 }
 
 } // namespace WW

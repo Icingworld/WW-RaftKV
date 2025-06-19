@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
+
+#include <RaftRpcCommon.h>
 
 namespace WW
 {
@@ -12,7 +13,7 @@ namespace WW
 class RaftRpcCRC32
 {
 private:
-    uint32_t _Table[256];       // CRC 表
+    CRC32Type _Table[256];       // CRC 表
 
 private:
     RaftRpcCRC32();
@@ -35,7 +36,7 @@ public:
      * @param _Data 原始数据
      * @param _Length 数据长度
     */
-    uint32_t crc32(const void * _Data, std::size_t _Length) const;
+    CRC32Type crc32(const void * _Data, std::size_t _Length) const;
 
 private:
     /**

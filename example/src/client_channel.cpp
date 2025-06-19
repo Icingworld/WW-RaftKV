@@ -3,7 +3,9 @@
 #include <functional>
 #include <sstream>
 
+#include <RaftRpcFixedHeader.h>
 #include <RaftRpcCRC32.h>
+
 #include <muduo/net/TcpConnection.h>
 
 using namespace WW;
@@ -71,15 +73,15 @@ void ClientChannel::CallMethod(const google::protobuf::MethodDescriptor * _Metho
     }
 
     // 构造一个固定头
-    FixedHeader header;
-    header.magic_number = 0x0A1B2C3D4E5F6A7B;
-    header.total_length = sizeof(FixedHeader) + rpc_str.size();
+    RaftRpcFixedHeader header;
+    header._Magic_number = 0x0A1B2C3D4E5F6A7B;
+    header._Total_length = sizeof(RaftRpcFixedHeader) + rpc_str.size();
     // 计算校验和
-    uint32_t crc32 = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+    CRC32Type crc32 = RaftRpcFixedHeader::calculateHeaderChecksum(header);
     // 转换为网络序
-    header.magic_number = htobe64(header.magic_number);
-    header.total_length = htobe32(header.total_length);
-    header.header_checksum = htobe32(crc32);
+    header._Magic_number = htobe64(header._Magic_number);
+    header._Total_length = htobe32(header._Total_length);
+    header._Header_checksum = htobe32(crc32);
 
     // 生成固定头字符串
     std::string header_str;
@@ -120,6 +122,11 @@ void ClientChannel::connect()
     }
 }
 
+void ClientChannel::setConnectedCallback(Callback _Callback)
+{
+    this->_Callback = _Callback;
+}
+
 void ClientChannel::disconnect()
 {
     if (_Client != nullptr && _Client->connection()) {
@@ -131,6 +138,7 @@ void ClientChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 {
     if (_Conn->connected()) {
         // 连接建立
+        _Callback();
     } else {
         // 连接断开，清理所有等待中的请求
         std::lock_guard<std::mutex> lock(_Mutex);
@@ -151,25 +159,25 @@ void ClientChannel::_OnConnection(const muduo::net::TcpConnectionPtr & _Conn)
 
 void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo::net::Buffer * _Buffer, muduo::Timestamp _Receive_time)
 {
-    while (_Buffer->readableBytes() >= sizeof(FixedHeader)) {
-        FixedHeader header;
+    while (_Buffer->readableBytes() >= sizeof(RaftRpcFixedHeader)) {
+        RaftRpcFixedHeader header;
         // 取出固定头
         ::memcpy(&header, _Buffer->peek(), sizeof(header));
 
         // 字节序转换
-        header.magic_number = be64toh(header.magic_number);
-        header.total_length = be32toh(header.total_length);
-        uint32_t received_checksum = be32toh(header.header_checksum);
+        header._Magic_number = be64toh(header._Magic_number);
+        header._Total_length = be32toh(header._Total_length);
+        CRC32Type received_checksum = be32toh(header._Header_checksum);
 
         // 验证魔数
-        if (header.magic_number != 0x0A1B2C3D4E5F6A7B) {
+        if (header._Magic_number != 0x0A1B2C3D4E5F6A7B) {
             // 严重错误，清空缓冲区
             _Buffer->retrieveAll();
             return;
         }
 
         // 验证校验和
-        uint32_t crc = RaftRpcSerialization::_CalculateHeaderChecksum(header);
+        CRC32Type crc = RaftRpcFixedHeader::calculateHeaderChecksum(header);
         if (crc != received_checksum) {
             // 校验和验证失败，跳过坏头部
             _Buffer->retrieve(sizeof(header));
@@ -177,13 +185,13 @@ void ClientChannel::_OnMessage(const muduo::net::TcpConnectionPtr & _Conn, muduo
         }
         
         // 检查完整数据包
-        if (_Buffer->readableBytes() < header.total_length) {
+        if (_Buffer->readableBytes() < header._Total_length) {
             // 数据不完整，等待更多数据
             return;
         }
 
-        _Buffer->retrieve(sizeof(FixedHeader));
-        std::string packet = _Buffer->retrieveAsString(header.total_length - sizeof(FixedHeader));
+        _Buffer->retrieve(sizeof(RaftRpcFixedHeader));
+        std::string packet = _Buffer->retrieveAsString(header._Total_length - sizeof(RaftRpcFixedHeader));
 
         // 反序列化
         std::string service_name;
