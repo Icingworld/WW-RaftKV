@@ -19,76 +19,61 @@ RaftRpcClient::~RaftRpcClient()
     disconnect();
 }
 
-void RaftRpcClient::RequestVote(std::unique_ptr<RequestVoteRequest> _Request, RequestVoteCallback && _Callback)
+void RaftRpcClient::RequestVote(const RequestVoteRequest & _Request, RequestVoteCallback && _Callback)
 {
-    // 控制器
-    std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
-        new RaftRpcController()
-    );
-    // 响应
-    std::unique_ptr<RequestVoteResponse> response = std::unique_ptr<RequestVoteResponse>(
-        new RequestVoteResponse()
-    );
+    _Event_loop->runInLoop([this, request_copy = _Request, callback_move = std::move(_Callback)]() mutable {
+        // 创建控制器
+        std::unique_ptr<RaftRpcController> controller = std::make_unique<RaftRpcController>();
+        // 创建请求
+        std::unique_ptr<RequestVoteRequest> request = std::make_unique<RequestVoteRequest>(request_copy);
+        // 创建响应
+        std::unique_ptr<RequestVoteResponse> response = std::make_unique<RequestVoteResponse>();
+        // 创建闭包
+        RequestVoteClosure * closure = new RequestVoteClosure(
+            std::move(controller), std::move(request), std::move(response), std::move(callback_move)
+        );
 
-    // 取出指针
-    RaftRpcController * controller_ptr = controller.get();
-    RequestVoteRequest * request_ptr = _Request.get();
-    RequestVoteResponse * response_ptr = response.get();
-
-    // 闭包
-    RequestVoteClosure * closure = new RequestVoteClosure(
-        std::move(controller), std::move(_Request), std::move(response), std::move(_Callback)
-    );
-
-    _Stub->RequestVote(controller_ptr, request_ptr, response_ptr, closure);
+        // 发送请求
+        _Stub->RequestVote(closure->getController(), closure->getRequest(), closure->getResponse(), closure);
+    });
 }
 
-void RaftRpcClient::AppendEntries(std::unique_ptr<AppendEntriesRequest> _Request, AppendEntriesCallback && _Callback)
+void RaftRpcClient::AppendEntries(const AppendEntriesRequest & _Request, AppendEntriesCallback && _Callback)
 {
-    // 控制器
-    std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
-        new RaftRpcController()
-    );
-    // 响应
-    std::unique_ptr<AppendEntriesResponse> response = std::unique_ptr<AppendEntriesResponse>(
-        new AppendEntriesResponse()
-    );
+    _Event_loop->runInLoop([this, request_copy = _Request, callback = std::move(_Callback)]() mutable {
+        // 创建控制器
+        std::unique_ptr<RaftRpcController> controller = std::make_unique<RaftRpcController>();
+        // 重新获得请求的所有权
+        std::unique_ptr<AppendEntriesRequest> request = std::make_unique<AppendEntriesRequest>(request_copy);
+        // 创建响应
+        std::unique_ptr<AppendEntriesResponse> response = std::make_unique<AppendEntriesResponse>();
+        // 创建闭包
+        AppendEntriesClosure * closure = new AppendEntriesClosure(
+            std::move(controller), std::move(request), std::move(response), std::move(callback)
+        );
 
-    // 取出指针
-    RaftRpcController * controller_ptr = controller.get();
-    AppendEntriesRequest * request_ptr = _Request.get();
-    AppendEntriesResponse * response_ptr = response.get();
-
-    // 闭包
-    AppendEntriesClosure * closure = new AppendEntriesClosure(
-        std::move(controller), std::move(_Request), std::move(response), std::move(_Callback)
-    );
-
-    _Stub->AppendEntries(controller_ptr, request_ptr, response_ptr, closure);
+        // 发送请求
+        _Stub->AppendEntries(closure->getController(), closure->getRequest(), closure->getResponse(), closure);
+    });
 }
 
-void RaftRpcClient::InstallSnapshot(std::unique_ptr<InstallSnapshotRequest> _Request, InstallSnapshotCallback && _Callback)
+void RaftRpcClient::InstallSnapshot(const InstallSnapshotRequest & _Request, InstallSnapshotCallback && _Callback)
 {
-    // 控制器
-    std::unique_ptr<RaftRpcController> controller = std::unique_ptr<RaftRpcController>(
-        new RaftRpcController()
-    );
-    // 响应
-    std::unique_ptr<InstallSnapshotResponse> response = std::unique_ptr<InstallSnapshotResponse>(
-        new InstallSnapshotResponse()
-    );
+    _Event_loop->runInLoop([this, request_copy = _Request, callback = std::move(_Callback)]() mutable {
+        // 创建控制器
+        std::unique_ptr<RaftRpcController> controller = std::make_unique<RaftRpcController>();
+        // 重新获得请求的所有权
+        std::unique_ptr<InstallSnapshotRequest> request = std::make_unique<InstallSnapshotRequest>(request_copy);
+        // 创建响应
+        std::unique_ptr<InstallSnapshotResponse> response = std::make_unique<InstallSnapshotResponse>();
+        // 创建闭包
+        InstallSnapshotClosure * closure = new InstallSnapshotClosure(
+            std::move(controller), std::move(request), std::move(response), std::move(callback)
+        );
 
-    // 取出指针
-    RaftRpcController * controller_ptr = controller.get();
-    InstallSnapshotRequest * request_ptr = _Request.get();
-    InstallSnapshotResponse * response_ptr = response.get();
-
-    // 闭包
-    InstallSnapshotClosure * closure = new InstallSnapshotClosure(
-        std::move(controller), std::move(_Request), std::move(response), std::move(_Callback)
-    );
-
-    _Stub->InstallSnapshot(controller_ptr, request_ptr, response_ptr, closure);
+        // 发送请求
+        _Stub->InstallSnapshot(closure->getController(), closure->getRequest(), closure->getResponse(), closure);
+    });
 }
 
 void RaftRpcClient::connect()

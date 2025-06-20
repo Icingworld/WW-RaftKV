@@ -254,17 +254,15 @@ void RaftClerk::_SendRequestVoteRequest(const RaftRequestVoteRequestMessage * _M
     _Logger.debug("send request vote request to node: " + std::to_string(other_id));
 
     // 构造 Request 消息体
-    std::unique_ptr<RequestVoteRequest> request_vote_request = std::unique_ptr<RequestVoteRequest>(
-        new RequestVoteRequest()
-    );
-    request_vote_request->set_term(this_term);
-    request_vote_request->set_candidate_id(this_id);
-    request_vote_request->set_last_log_index(this_last_log_index);
-    request_vote_request->set_last_log_term(this_last_log_term);
+    RequestVoteRequest request_vote_request;
+    request_vote_request.set_term(this_term);
+    request_vote_request.set_candidate_id(this_id);
+    request_vote_request.set_last_log_index(this_last_log_index);
+    request_vote_request.set_last_log_term(this_last_log_term);
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->RequestVote(std::move(request_vote_request), std::bind(
+    client->RequestVote(request_vote_request, std::bind(
         &RaftClerk::_HandleRequestVoteResponse, this, std::placeholders::_1, std::placeholders::_2
     ));
 }
@@ -307,25 +305,23 @@ void RaftClerk::_SendAppendEntriesRequest(const RaftAppendEntriesRequestMessage 
     // _Logger.debug("this id: " + std::to_string(this_id) + ", term: " + std::to_string(this_term));
 
     // 构造 Request 消息体
-    std::unique_ptr<AppendEntriesRequest> append_entries_request = std::unique_ptr<AppendEntriesRequest>(
-        new AppendEntriesRequest()
-    );
-    append_entries_request->set_term(this_term);
-    append_entries_request->set_leader_id(this_id);
-    append_entries_request->set_prev_log_index(other_prev_log_index);
-    append_entries_request->set_prev_log_term(other_prev_log_term);
-    append_entries_request->set_leader_commit(this_leader_commit);
+    AppendEntriesRequest append_entries_request;
+    append_entries_request.set_term(this_term);
+    append_entries_request.set_leader_id(this_id);
+    append_entries_request.set_prev_log_index(other_prev_log_index);
+    append_entries_request.set_prev_log_term(other_prev_log_term);
+    append_entries_request.set_leader_commit(this_leader_commit);
 
     // 将日志条目添加到请求中
     for (const RaftLogEntry & entry : _Message->entries) {
-        WW::LogEntry * proto_entry = append_entries_request->add_entries();
+        WW::LogEntry * proto_entry = append_entries_request.add_entries();
         proto_entry->set_term(entry.getTerm());
         proto_entry->set_command(entry.getCommand());
     }
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->AppendEntries(std::move(append_entries_request), std::bind(
+    client->AppendEntries(append_entries_request, std::bind(
         &RaftClerk::_HandleAppendEntriesResponse, this, other_id, std::placeholders::_1, std::placeholders::_2
     ));
 }
@@ -374,18 +370,16 @@ void RaftClerk::_SendInstallSnapshotRequest(const RaftInstallSnapshotRequestMess
     std::string snapshot_data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
     // 构造 InstallSnapshot 消息体
-    std::unique_ptr<InstallSnapshotRequest> install_snapshot_request = std::unique_ptr<InstallSnapshotRequest>(
-        new InstallSnapshotRequest()
-    );
-    install_snapshot_request->set_term(this_term);
-    install_snapshot_request->set_leader_id(this_id);
-    install_snapshot_request->set_last_included_index(this_last_included_index);
-    install_snapshot_request->set_last_included_term(this_last_included_term);
-    install_snapshot_request->set_data(snapshot_data);
+    InstallSnapshotRequest install_snapshot_request;;
+    install_snapshot_request.set_term(this_term);
+    install_snapshot_request.set_leader_id(this_id);
+    install_snapshot_request.set_last_included_index(this_last_included_index);
+    install_snapshot_request.set_last_included_term(this_last_included_term);
+    install_snapshot_request.set_data(snapshot_data);
 
     // 发送请求
     RaftRpcClient * client = _Clients[other_id];
-    client->InstallSnapshot(std::move(install_snapshot_request), std::bind(
+    client->InstallSnapshot(install_snapshot_request, std::bind(
         &RaftClerk::_HandleInstallSnapshotResponse, this, other_id, std::placeholders::_1, std::placeholders::_2
     ));
 }

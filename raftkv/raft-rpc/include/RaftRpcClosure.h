@@ -53,6 +53,21 @@ public:
         // 析构闭包
         delete this;
     }
+
+    google::protobuf::RpcController * getController()
+    {
+        return _Controller.get();
+    }
+
+    RequestType * getRequest()
+    {
+        return _Request.get();
+    }
+
+    ResponseType * getResponse()
+    {
+        return _Response.get();
+    }
 };
 
 /**
