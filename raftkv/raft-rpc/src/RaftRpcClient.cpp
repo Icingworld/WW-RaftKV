@@ -79,13 +79,8 @@ void RaftRpcClient::InstallSnapshot(const InstallSnapshotRequest & _Request, Ins
 void RaftRpcClient::connect()
 {
     if (_Channel == nullptr) {
-        _Channel = std::unique_ptr<RaftRpcChannel>(
-            new RaftRpcChannel(_Event_loop, _Ip, _Port)
-        );
-
-        _Stub = std::unique_ptr<RaftService_Stub>(
-            new RaftService_Stub(_Channel.get())
-        );
+        _Channel = std::make_unique<RaftRpcChannel>(_Event_loop, _Ip, _Port);
+        _Stub = std::make_unique<RaftService_Stub>(_Channel.get());
     }
 
     _Channel->connect();

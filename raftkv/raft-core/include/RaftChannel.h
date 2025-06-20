@@ -34,12 +34,10 @@ public:
     void push(RaftMessageType && _Message)
     {
         // 去掉 & 和 const
-        using T = typename std::decay<RaftMessageType>::type;
+        using T = std::decay_t<RaftMessageType>;
 
         // 构造一个消息
-        std::unique_ptr<RaftMessage> ptr = std::unique_ptr<T>(
-            new T(std::forward<RaftMessageType>(_Message))
-        );
+        std::unique_ptr<RaftMessage> ptr = std::make_unique<T>(std::forward<RaftMessageType>(_Message));
 
         {
             std::lock_guard<std::mutex> lock(_Mutex);

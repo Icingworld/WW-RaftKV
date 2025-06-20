@@ -70,14 +70,10 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     }
 
     // 初始化 Raft
-    _Raft = std::unique_ptr<Raft>(
-        new Raft(_Id, peers)
-    );
+    _Raft = std::make_unique<Raft>(_Id, peers);
 
     // 初始化 Raft Service
-    _Rpc_service = std::unique_ptr<RaftRpcServiceImpl>(
-        new RaftRpcServiceImpl()
-    );
+    _Rpc_service = std::make_unique<RaftRpcServiceImpl>();
 
     // 注册回调函数到 Raft Service
     _Rpc_service->registerRequestVoteCallback(std::bind(
@@ -93,15 +89,11 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     ));
 
     // 初始化 Raft 服务端
-    _Rpc_server = std::unique_ptr<RaftRpcServer>(
-        new RaftRpcServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getPort())
-    );
+    _Rpc_server = std::make_unique<RaftRpcServer>(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getPort());
     _Rpc_server->registerService(std::move(_Rpc_service));
 
     // 初始化 KVOperation Service
-    _KVOperation_service = std::unique_ptr<KVOperationServiceImpl>(
-        new KVOperationServiceImpl()
-    );
+    _KVOperation_service = std::make_unique<KVOperationServiceImpl>();
 
     // 注册回调函数到 KVOperation Service
     _KVOperation_service->registerExecuteCallback(std::bind(
@@ -109,9 +101,7 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     ));
 
     // 初始化 KVOperation 服务端
-    _KVOperation_server = std::unique_ptr<KVOperationServer>(
-        new KVOperationServer(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getKVPort())
-    );
+    _KVOperation_server = std::make_unique<KVOperationServer>(_Event_loop_client, _Peers[_Id].getIp(), _Peers[_Id].getKVPort());
     _KVOperation_server->registerService(std::move(_KVOperation_service));
 
     // 从持久化和快照初始化 Raft
