@@ -1,6 +1,6 @@
 #include "RaftRpcClient.h"
 
-#include <RaftRpcController.h>
+#include <Memory.h>
 
 namespace WW
 {
@@ -22,57 +22,126 @@ RaftRpcClient::~RaftRpcClient()
 void RaftRpcClient::RequestVote(const RequestVoteRequest & _Request, RequestVoteCallback && _Callback)
 {
     _Event_loop->runInLoop([this, request_copy = _Request, callback_move = std::move(_Callback)]() mutable {
+        // 获取线程缓存的分配器
+        thread_local MemoryPoolAllocator<RaftRpcController> controller_allocator;
+        thread_local MemoryPoolAllocator<RequestVoteRequest> request_allocator;
+        thread_local MemoryPoolAllocator<RequestVoteResponse> response_allocator;
+        thread_local MemoryPoolAllocator<RequestVoteClosure> closure_allocator;
+
         // 创建控制器
-        std::unique_ptr<RaftRpcController> controller = std::make_unique<RaftRpcController>();
+        RaftRpcController * controller_ptr = controller_allocator.allocate(1);
+        controller_allocator.construct(controller_ptr);
+        std::unique_ptr<RaftRpcController, MemoryPoolDeleter<RaftRpcController>> controller(
+            controller_ptr, MemoryPoolDeleter<RaftRpcController>()
+        );
         // 创建请求
-        std::unique_ptr<RequestVoteRequest> request = std::make_unique<RequestVoteRequest>(request_copy);
+        RequestVoteRequest * request_ptr = request_allocator.allocate(1);
+        request_allocator.construct(request_ptr, std::move(request_copy));
+        std::unique_ptr<RequestVoteRequest, MemoryPoolDeleter<RequestVoteRequest>> request(
+            request_ptr, MemoryPoolDeleter<RequestVoteRequest>()
+        );
         // 创建响应
-        std::unique_ptr<RequestVoteResponse> response = std::make_unique<RequestVoteResponse>();
+        RequestVoteResponse * response_ptr = response_allocator.allocate(1);
+        response_allocator.construct(response_ptr);
+        std::unique_ptr<RequestVoteResponse, MemoryPoolDeleter<RequestVoteResponse>> response(
+            response_ptr, MemoryPoolDeleter<RequestVoteResponse>()
+        );
         // 创建闭包
-        RequestVoteClosure * closure = new RequestVoteClosure(
-            std::move(controller), std::move(request), std::move(response), std::move(callback_move)
+        RequestVoteClosure * closure_ptr = closure_allocator.allocate(1);
+        closure_allocator.construct(
+            closure_ptr,
+            std::move(controller),
+            std::move(request),
+            std::move(response),
+            std::move(callback_move)
         );
 
         // 发送请求
-        _Stub->RequestVote(closure->getController(), closure->getRequest(), closure->getResponse(), closure);
+        _Stub->RequestVote(controller_ptr, request_ptr, response_ptr, closure_ptr);
     });
 }
 
 void RaftRpcClient::AppendEntries(const AppendEntriesRequest & _Request, AppendEntriesCallback && _Callback)
 {
-    _Event_loop->runInLoop([this, request_copy = _Request, callback = std::move(_Callback)]() mutable {
+    _Event_loop->runInLoop([this, request_copy = _Request, callback_move = std::move(_Callback)]() mutable {
+        // 获取线程缓存的分配器
+        thread_local MemoryPoolAllocator<RaftRpcController> controller_allocator;
+        thread_local MemoryPoolAllocator<AppendEntriesRequest> request_allocator;
+        thread_local MemoryPoolAllocator<AppendEntriesResponse> response_allocator;
+        thread_local MemoryPoolAllocator<AppendEntriesClosure> closure_allocator;
+
         // 创建控制器
-        std::unique_ptr<RaftRpcController> controller = std::make_unique<RaftRpcController>();
-        // 重新获得请求的所有权
-        std::unique_ptr<AppendEntriesRequest> request = std::make_unique<AppendEntriesRequest>(request_copy);
+        RaftRpcController * controller_ptr = controller_allocator.allocate(1);
+        controller_allocator.construct(controller_ptr);
+        std::unique_ptr<RaftRpcController, MemoryPoolDeleter<RaftRpcController>> controller(
+            controller_ptr, MemoryPoolDeleter<RaftRpcController>()
+        );
+        // 创建请求
+        AppendEntriesRequest * request_ptr = request_allocator.allocate(1);
+        request_allocator.construct(request_ptr, std::move(request_copy));
+        std::unique_ptr<AppendEntriesRequest, MemoryPoolDeleter<AppendEntriesRequest>> request(
+            request_ptr, MemoryPoolDeleter<AppendEntriesRequest>()
+        );
         // 创建响应
-        std::unique_ptr<AppendEntriesResponse> response = std::make_unique<AppendEntriesResponse>();
+        AppendEntriesResponse * response_ptr = response_allocator.allocate(1);
+        response_allocator.construct(response_ptr);
+        std::unique_ptr<AppendEntriesResponse, MemoryPoolDeleter<AppendEntriesResponse>> response(
+            response_ptr, MemoryPoolDeleter<AppendEntriesResponse>()
+        );
         // 创建闭包
-        AppendEntriesClosure * closure = new AppendEntriesClosure(
-            std::move(controller), std::move(request), std::move(response), std::move(callback)
+        AppendEntriesClosure * closure_ptr = closure_allocator.allocate(1);
+        closure_allocator.construct(
+            closure_ptr,
+            std::move(controller),
+            std::move(request),
+            std::move(response),
+            std::move(callback_move)
         );
 
         // 发送请求
-        _Stub->AppendEntries(closure->getController(), closure->getRequest(), closure->getResponse(), closure);
+        _Stub->AppendEntries(controller_ptr, request_ptr, response_ptr, closure_ptr);
     });
 }
 
 void RaftRpcClient::InstallSnapshot(const InstallSnapshotRequest & _Request, InstallSnapshotCallback && _Callback)
 {
-    _Event_loop->runInLoop([this, request_copy = _Request, callback = std::move(_Callback)]() mutable {
+    _Event_loop->runInLoop([this, request_copy = _Request, callback_move = std::move(_Callback)]() mutable {
+        // 获取线程缓存的分配器
+        thread_local MemoryPoolAllocator<RaftRpcController> controller_allocator;
+        thread_local MemoryPoolAllocator<InstallSnapshotRequest> request_allocator;
+        thread_local MemoryPoolAllocator<InstallSnapshotResponse> response_allocator;
+        thread_local MemoryPoolAllocator<InstallSnapshotClosure> closure_allocator;
+
         // 创建控制器
-        std::unique_ptr<RaftRpcController> controller = std::make_unique<RaftRpcController>();
-        // 重新获得请求的所有权
-        std::unique_ptr<InstallSnapshotRequest> request = std::make_unique<InstallSnapshotRequest>(request_copy);
+        RaftRpcController * controller_ptr = controller_allocator.allocate(1);
+        controller_allocator.construct(controller_ptr);
+        std::unique_ptr<RaftRpcController, MemoryPoolDeleter<RaftRpcController>> controller(
+            controller_ptr, MemoryPoolDeleter<RaftRpcController>()
+        );
+        // 创建请求
+        InstallSnapshotRequest * request_ptr = request_allocator.allocate(1);
+        request_allocator.construct(request_ptr, std::move(request_copy));
+        std::unique_ptr<InstallSnapshotRequest, MemoryPoolDeleter<InstallSnapshotRequest>> request(
+            request_ptr, MemoryPoolDeleter<InstallSnapshotRequest>()
+        );
         // 创建响应
-        std::unique_ptr<InstallSnapshotResponse> response = std::make_unique<InstallSnapshotResponse>();
+        InstallSnapshotResponse * response_ptr = response_allocator.allocate(1);
+        response_allocator.construct(response_ptr);
+        std::unique_ptr<InstallSnapshotResponse, MemoryPoolDeleter<InstallSnapshotResponse>> response(
+            response_ptr, MemoryPoolDeleter<InstallSnapshotResponse>()
+        );
         // 创建闭包
-        InstallSnapshotClosure * closure = new InstallSnapshotClosure(
-            std::move(controller), std::move(request), std::move(response), std::move(callback)
+        InstallSnapshotClosure * closure_ptr = closure_allocator.allocate(1);
+        closure_allocator.construct(
+            closure_ptr,
+            std::move(controller),
+            std::move(request),
+            std::move(response),
+            std::move(callback_move)
         );
 
         // 发送请求
-        _Stub->InstallSnapshot(closure->getController(), closure->getRequest(), closure->getResponse(), closure);
+        _Stub->InstallSnapshot(controller_ptr, request_ptr, response_ptr, closure_ptr);
     });
 }
 

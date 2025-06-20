@@ -144,4 +144,30 @@ public:
     }
 };
 
+/**
+ * @brief 用于智能指针的删除器
+*/
+template <typename _Type>
+class MemoryPoolDeleter
+{
+public:
+    using value_type = _Type;
+    using pointer = _Type *;
+
+public:
+    void operator()(pointer _Ptr) const
+    {
+        if (_Ptr == nullptr) {
+            return;
+        }
+
+        // 析构对象
+        _Ptr->~value_type();
+
+        // 释放内存
+        thread_local MemoryPoolAllocator<value_type> allocator;
+        allocator.deallocate(_Ptr, 1);
+    }
+};
+
 } // namespace WW

@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 
+#include <Memory.h>
 #include <RaftRpcCommon.h>
 
 #include <muduo/net/TcpConnection.h>
@@ -18,22 +19,26 @@ namespace WW
  * @brief RaftRpcClosure
  * @details 拥有控制器、请求和响应的所有权
 */
-template <typename RequestType, typename ResponseType>
+template <typename ControllerType, typename RequestType, typename ResponseType>
 class RaftRpcClientClosure : public google::protobuf::Closure
 {
 public:
-    using ResponseCallback = std::function<void(const ResponseType *, const google::protobuf::RpcController *)>;
+    using ResponseCallback = std::function<void(const ResponseType *, const ControllerType *)>;
+
+    using ControllerDeleterFunc = MemoryPoolDeleter<ControllerType>;
+    using RequestTypeDeleterFunc = MemoryPoolDeleter<RequestType>;
+    using ResponseTypeDeleterFunc = MemoryPoolDeleter<ResponseType>;
 
 private:
-    std::unique_ptr<google::protobuf::RpcController> _Controller;   // 控制器
-    std::unique_ptr<RequestType> _Request;                          // 请求
-    std::unique_ptr<ResponseType> _Response;                        // 响应
+    std::unique_ptr<ControllerType, ControllerDeleterFunc> _Controller;    // 控制器
+    std::unique_ptr<RequestType, RequestTypeDeleterFunc> _Request;                          // 请求
+    std::unique_ptr<ResponseType, ResponseTypeDeleterFunc> _Response;                       // 响应
     ResponseCallback _Callback;
 
 public:
-    RaftRpcClientClosure(std::unique_ptr<google::protobuf::RpcController> _Controller,
-                        std::unique_ptr<RequestType> _Request,
-                        std::unique_ptr<ResponseType> _Response,
+    RaftRpcClientClosure(std::unique_ptr<ControllerType, ControllerDeleterFunc> _Controller,
+                        std::unique_ptr<RequestType, RequestTypeDeleterFunc> _Request,
+                        std::unique_ptr<ResponseType, ResponseTypeDeleterFunc> _Response,
                         ResponseCallback && _Callback)
         : _Controller(std::move(_Controller))
         , _Request(std::move(_Request))
@@ -51,22 +56,10 @@ public:
         _Callback(_Response.get(), _Controller.get());
 
         // 析构闭包
-        delete this;
-    }
-
-    google::protobuf::RpcController * getController()
-    {
-        return _Controller.get();
-    }
-
-    RequestType * getRequest()
-    {
-        return _Request.get();
-    }
-
-    ResponseType * getResponse()
-    {
-        return _Response.get();
+        this->~RaftRpcClientClosure();
+        // 释放内存
+        thread_local MemoryPoolAllocator<RaftRpcClientClosure> allocator;
+        allocator.deallocate(this, 1);
     }
 };
 

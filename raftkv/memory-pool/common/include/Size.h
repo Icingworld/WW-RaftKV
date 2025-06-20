@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Common.h>
+#include <MemoryCommon.h>
 
 namespace WW
 {

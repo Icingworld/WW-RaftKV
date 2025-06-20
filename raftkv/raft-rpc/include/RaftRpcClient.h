@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include <RaftRpcController.h>
 #include <RaftRpcClosure.h>
 #include <RaftRpcChannel.h>
 #include <Raft.pb.h>
@@ -15,9 +16,9 @@ namespace WW
 class RaftRpcClient
 {
 public:
-    using RequestVoteClosure = RaftRpcClientClosure<RequestVoteRequest, RequestVoteResponse>;
-    using AppendEntriesClosure = RaftRpcClientClosure<AppendEntriesRequest, AppendEntriesResponse>;
-    using InstallSnapshotClosure = RaftRpcClientClosure<InstallSnapshotRequest, InstallSnapshotResponse>;
+    using RequestVoteClosure = RaftRpcClientClosure<RaftRpcController, RequestVoteRequest, RequestVoteResponse>;
+    using AppendEntriesClosure = RaftRpcClientClosure<RaftRpcController, AppendEntriesRequest, AppendEntriesResponse>;
+    using InstallSnapshotClosure = RaftRpcClientClosure<RaftRpcController, InstallSnapshotRequest, InstallSnapshotResponse>;
 
     using RequestVoteCallback = typename RequestVoteClosure::ResponseCallback;
     using AppendEntriesCallback = typename AppendEntriesClosure::ResponseCallback;
