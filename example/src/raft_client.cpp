@@ -4,9 +4,13 @@
 
 #include <uuid.h>
 #include <client_channel.h>
+#include <Memory.h>
 #include <RaftRpcController.h>
 #include <RaftRpcClosure.h>
+
 #include <muduo/base/Logging.h>
+
+using KVOperationClosure = WW::RaftRpcClientClosure<WW::RaftRpcController, WW::KVOperationRequest, WW::KVOperationResponse>;
 
 void ParseResponse(const WW::KVOperationResponse * _Response, const google::protobuf::RpcController * _Controller)
 {
@@ -45,51 +49,66 @@ void ParseResponse(const WW::KVOperationResponse * _Response, const google::prot
     exit(0);
 }
 
-void SendKVOperationCommand(WW::KVOperationService_Stub * stub, std::unique_ptr<WW::KVOperationRequest> request, std::shared_ptr<muduo::net::EventLoop> loop)
+void SendKVOperationCommand(WW::KVOperationService_Stub * stub, const WW::KVOperationRequest & request, std::shared_ptr<muduo::net::EventLoop> loop)
 {
-    // 控制器
-    std::unique_ptr<WW::RaftRpcController> controller = std::unique_ptr<WW::RaftRpcController>(
-        new WW::RaftRpcController()
-    );
-    // 响应
-    std::unique_ptr<WW::KVOperationResponse> response = std::unique_ptr<WW::KVOperationResponse>(
-        new WW::KVOperationResponse()
-    );
+    loop->runInLoop([stub, request_copy = request]() {
+        // 获取线程缓存的分配器
+        thread_local WW::MemoryPoolAllocator<WW::RaftRpcController> controller_allocator;
+        thread_local WW::MemoryPoolAllocator<WW::KVOperationRequest> request_allocator;
+        thread_local WW::MemoryPoolAllocator<WW::KVOperationResponse> response_allocator;
+        thread_local WW::MemoryPoolAllocator<KVOperationClosure> closure_allocator;
 
-    // 取出指针
-    WW::RaftRpcController * controller_ptr = controller.get();
-    WW::KVOperationRequest * request_ptr = request.get();
-    WW::KVOperationResponse * response_ptr = response.get();
+        // 创建控制器
+        WW::RaftRpcController * controller_ptr = controller_allocator.allocate(1);
+        controller_allocator.construct(controller_ptr);
+        std::unique_ptr<WW::RaftRpcController, WW::MemoryPoolDeleter<WW::RaftRpcController>> controller(
+            controller_ptr, WW::MemoryPoolDeleter<WW::RaftRpcController>()
+        );
+        // 创建请求
+        WW::KVOperationRequest * request_ptr = request_allocator.allocate(1);
+        request_allocator.construct(request_ptr, std::move(request_copy));
+        std::unique_ptr<WW::KVOperationRequest, WW::MemoryPoolDeleter<WW::KVOperationRequest>> request(
+            request_ptr, WW::MemoryPoolDeleter<WW::KVOperationRequest>()
+        );
+        // 创建响应
+        WW::KVOperationResponse * response_ptr = response_allocator.allocate(1);
+        response_allocator.construct(response_ptr);
+        std::unique_ptr<WW::KVOperationResponse, WW::MemoryPoolDeleter<WW::KVOperationResponse>> response(
+            response_ptr, WW::MemoryPoolDeleter<WW::KVOperationResponse>()
+        );
+        KVOperationClosure * closure_ptr = closure_allocator.allocate(1);
+        closure_allocator.construct(
+            closure_ptr,
+            std::move(controller),
+            std::move(request),
+            std::move(response),
+            std::bind(ParseResponse, std::placeholders::_1, std::placeholders::_2)
+        );
 
-    WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse> * closure = new WW::RaftRpcClientClosure<WW::KVOperationRequest, WW::KVOperationResponse>(
-        std::move(controller), std::move(request), std::move(response), std::bind(
-            ParseResponse, std::placeholders::_1, std::placeholders::_2
-        )
-    );
-    stub->Execute(controller_ptr, request_ptr, response_ptr, closure);
+        // 发送请求
+        stub->Execute(controller_ptr, request_ptr, response_ptr, closure_ptr);
+    });
 }
 
 int main(int argc, char ** argv)
 {
-    std::unique_ptr<WW::KVOperationRequest> request = std::unique_ptr<WW::KVOperationRequest>(
-        new WW::KVOperationRequest()
-    );
+    WW::KVOperationRequest request;
 
     // 生成 UUID
     UUID uuid;
-    WW::Meta * meta = request->mutable_meta();
+    WW::Meta * meta = request.mutable_meta();
     meta->set_uuid(uuid.toString());
 
     if (argc > 1) {
         std::string operation = argv[1];
         if (operation == "put") {
-            request->set_type(WW::OperationType::PUT);
+            request.set_type(WW::OperationType::PUT);
         } else if (operation == "update") {
-            request->set_type(WW::OperationType::UPDATE);
+            request.set_type(WW::OperationType::UPDATE);
         } else if (operation == "delete") {
-            request->set_type(WW::OperationType::DELETE);
+            request.set_type(WW::OperationType::DELETE);
         } else if (operation == "get") {
-            request->set_type(WW::OperationType::GET);
+            request.set_type(WW::OperationType::GET);
         } else {
             std::cerr << "invalid operation!" << std::endl;
             return -1;
@@ -97,11 +116,11 @@ int main(int argc, char ** argv)
     }
 
     if (argc > 2) {
-        request->set_key(argv[2]);
+        request.set_key(argv[2]);
     }
 
     if (argc > 3) {
-        request->set_value(argv[3]);
+        request.set_value(argv[3]);
     }
 
     if (argc > 4) {
