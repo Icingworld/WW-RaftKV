@@ -23,17 +23,19 @@ template <typename ControllerType, typename RequestType, typename ResponseType>
 class RaftRpcClientClosure : public google::protobuf::Closure
 {
 public:
+    // 回调函数类型
     using ResponseCallback = std::function<void(const ResponseType *, const ControllerType *)>;
 
+    // 删除器类型
     using ControllerDeleterFunc = MemoryPoolDeleter<ControllerType>;
     using RequestTypeDeleterFunc = MemoryPoolDeleter<RequestType>;
     using ResponseTypeDeleterFunc = MemoryPoolDeleter<ResponseType>;
 
 private:
-    std::unique_ptr<ControllerType, ControllerDeleterFunc> _Controller;    // 控制器
-    std::unique_ptr<RequestType, RequestTypeDeleterFunc> _Request;                          // 请求
-    std::unique_ptr<ResponseType, ResponseTypeDeleterFunc> _Response;                       // 响应
-    ResponseCallback _Callback;
+    std::unique_ptr<ControllerType, ControllerDeleterFunc> _Controller;     // 控制器
+    std::unique_ptr<RequestType, RequestTypeDeleterFunc> _Request;          // 请求
+    std::unique_ptr<ResponseType, ResponseTypeDeleterFunc> _Response;       // 响应
+    ResponseCallback _Callback;                                             // 响应回调函数
 
 public:
     RaftRpcClientClosure(std::unique_ptr<ControllerType, ControllerDeleterFunc> _Controller,
@@ -69,14 +71,15 @@ public:
 class RaftRpcServerClosure : public google::protobuf::Closure
 {
 public:
+    // 回调函数类型
     using ResponseCallback = std::function<void()>;
 
 private:
-    SequenceType _Sequence_id;
-    std::unique_ptr<google::protobuf::RpcController> _Controller;
-    std::unique_ptr<google::protobuf::Message> _Request;
-    std::unique_ptr<google::protobuf::Message> _Response;
-    ResponseCallback _Callback;
+    SequenceType _Sequence_id;                                      // 序列号
+    std::unique_ptr<google::protobuf::RpcController> _Controller;   // 控制器
+    std::unique_ptr<google::protobuf::Message> _Request;            // 请求
+    std::unique_ptr<google::protobuf::Message> _Response;           // 响应
+    ResponseCallback _Callback;                                     // 响应回调函数
 
 public:
     RaftRpcServerClosure(SequenceType _Sequence_id,

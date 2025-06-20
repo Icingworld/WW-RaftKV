@@ -7,10 +7,8 @@ namespace WW
 
 RaftRpcClient::RaftRpcClient(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port)
     : _Event_loop(_Event_loop)
-    , _Ip(_Ip)
-    , _Port(_Port)
-    , _Stub(nullptr)
-    , _Channel(nullptr)
+    , _Channel(std::make_unique<RaftRpcChannel>(_Event_loop, _Ip, _Port))
+    , _Stub(std::make_unique<RaftService_Stub>(_Channel.get()))
 {
 }
 
@@ -147,19 +145,12 @@ void RaftRpcClient::InstallSnapshot(const InstallSnapshotRequest & _Request, Ins
 
 void RaftRpcClient::connect()
 {
-    if (_Channel == nullptr) {
-        _Channel = std::make_unique<RaftRpcChannel>(_Event_loop, _Ip, _Port);
-        _Stub = std::make_unique<RaftService_Stub>(_Channel.get());
-    }
-
     _Channel->connect();
 }
 
 void RaftRpcClient::disconnect()
 {
-    if (_Channel != nullptr) {
-        _Channel->disconnect();
-    }
+    _Channel->disconnect();
 }
 
 } // namespace WW

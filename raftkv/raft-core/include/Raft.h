@@ -71,8 +71,7 @@ private:
     // 线程
     std::atomic<bool> _Running;                 // 是否运行
     std::thread _Raft_thread;                   // 用于驱动 Raft 时间的线程
-    std::thread _Message_thread;
-    std::mutex _Mutex;
+    std::thread _Message_thread;                // 用于读取消息队列的线程
 
     // 日志
     Logger & _Logger;
@@ -88,6 +87,9 @@ public:
     */
     void start();
 
+    /**
+     * @brief 启动读取消息队列线程
+    */
     void startMessage();
 
     /**
@@ -97,6 +99,7 @@ public:
 
     /**
      * @brief 传入消息
+     * @param _Message 消息
     */
     template <typename RaftMessageType>
     void step(RaftMessageType && _Message)
@@ -106,6 +109,7 @@ public:
 
     /**
      * @brief 从消息队列中读取消息
+     * @param _Wait_ms 读取超时时间（毫秒），`< 0` 则一直等待
     */
     std::unique_ptr<RaftMessage> readReady(int _Wait_ms);
 
@@ -131,7 +135,8 @@ private:
     void _GetOutterMessage();
 
     /**
-     * @brief 处理消息
+     * @brief 处理 RaftClerk 中传递进来的消息
+     * @param _Message 消息
     */
     void _HandleMessage(std::unique_ptr<RaftMessage> _Message);
 
@@ -168,12 +173,12 @@ private:
     void _HandleRequestVoteResponse(const RaftRequestVoteResponseMessage * _Message);
 
     /**
-     * @brief 处理接收到的日志同步请求
+     * @brief 处理接收到的心跳/日志同步请求
     */
     void _HandleAppendEntriesRequest(const RaftAppendEntriesRequestMessage * _Message);
 
     /**
-     * @brief 处理接收到的日志同步响应
+     * @brief 处理接收到的心跳/日志同步响应
     */
     void _HandleAppendEntriesResponse(const RaftAppendEntriesResponseMessage * _Message);
 
@@ -230,22 +235,61 @@ private:
     */
     int _GetRandomTimeout(int _Timeout_min, int _Timeout_max) const;
 
+    /**
+     * @brief 重置选举超时时间
+    */
     void _ResetElectionDeadline();
 
+    /**
+     * @brief 重置心跳超时时间
+    */
     void _ResetHeartbeatDeadline();
 
+    /**
+     * @brief 获取指定索引日志条目的任期
+     * @param _Index 索引
+     * @return 任期
+    */
     TermId _GetTermAt(LogIndex _Index) const;
 
+    /**
+     * @brief 判断日志条目是否至少比自己新
+     * @param _Last_index 最新索引
+     * @param _Last_term 最新任期
+    */
     bool _LogUpToDate(LogIndex _Last_index, TermId _Last_term) const;
 
+    /**
+     * @brief 判断是否有指定索引和任期的日志条目
+     * @param _Index 索引
+     * @param _Term 任期
+    */
     bool _LogMatch(LogIndex _Index, TermId _Term) const;
 
+    /**
+     * @brief 截断指定索引之后的所有日志
+     * @param _Truncate_index 截断索引
+    */
     void _TruncateAfter(LogIndex _Truncate_index);
 
+    /**
+     * @brief 截断指定索引前的所有日志
+     * @param _Truncate_index 截断索引
+    */
     void _TruncateBefore(LogIndex _Truncate_index);
 
+    /**
+     * @brief 访问指定索引的日志条目
+     * @param _Index 索引
+     * @return `const RaftLogEntry &` 日志条目引用
+    */
     const RaftLogEntry & _GetLogAt(LogIndex _Index) const;
 
+    /**
+     * @brief 获取从指定索引起的所有日志条目
+     * @param _Index 索引
+     * @return 日志条目数组
+    */
     std::vector<RaftLogEntry> _GetLogFrom(LogIndex _Index) const;
 
     /**

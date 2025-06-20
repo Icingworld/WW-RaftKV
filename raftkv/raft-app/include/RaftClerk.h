@@ -59,49 +59,117 @@ public:
     ~RaftClerk();
 
 public:
+    /**
+     * @brief 启动 Raft
+    */
     void start();
 
+    /**
+     * @brief 关闭 Raft
+    */
     void stop();
 
 private:
+    /**
+     * @brief 消息队列线程
+    */
     void _GetInnerMessage();
 
+    /**
+     * @brief 处理 Raft 中传递出来的消息
+     * @param _Message 消息
+    */
     void _HandleMessage(std::unique_ptr<RaftMessage> _Message);
 
+    /**
+     * @brief 发送投票请求
+    */
     void _SendRequestVoteRequest(const RaftRequestVoteRequestMessage * _Message);
 
+    /**
+     * @brief 发送投票响应
+     */
     void _SendRequestVoteResponse(const RaftRequestVoteResponseMessage * _Message);
 
+    /**
+     * @brief 发送心跳/日志同步请求
+    */
     void _SendAppendEntriesRequest(const RaftAppendEntriesRequestMessage * _Message);
 
+    /**
+     * @brief 发送心跳/日志同步请求
+    */
     void _SendAppendEntriesResponse(const RaftAppendEntriesResponseMessage * _Message);
 
+    /**
+     * @brief 发送快照安装请求
+     */
     void _SendInstallSnapshotRequest(const RaftInstallSnapshotRequestMessage * _Message);
 
+    /**
+     * @brief 发送快照安装响应
+     */
     void _SendInstallSnapshotResponse(const RaftInstallSnapshotResponseMessage * _Message);
 
+    /**
+     * @brief 发送客户端操作响应
+     */
     void _SendKVOperationResponse(const KVOperationResponseMessage * _Message);
 
+    /**
+     * @brief 处理 Raft 中传出的日志提交应用请求
+    */
     void _ApplyCommitLogs(const ApplyCommitLogsRequestMessage * _Message);
 
+    /**
+     * @brief 处理 Raft 中传出的快照安装请求
+    */
     void _ApplySnapshot(const ApplySnapshotRequestMessage * _Message);
 
+    /**
+     * @brief 处理 Raft 中传出的快照压缩请求
+    */
     void _GenerateSnapshot(const GenerateSnapshotRequestMessage * _Message);
 
+    /**
+     * @brief 从持久化文件安装快照
+     * @details 启动时调用
+    */
     void _InstallSnapshotFromPersist();
 
+    /**
+     * @brief 处理接收到的投票请求
+    */
     void _HandleRequestVoteRequest(const RequestVoteRequest * _Request, google::protobuf::Closure * _Done);
 
+    /**
+     * @brief 处理接收到的投票响应
+    */
     void _HandleRequestVoteResponse(const RequestVoteResponse * _Response, const google::protobuf::RpcController * _Controller);
 
+    /**
+     * @brief 处理接收到的心跳/日志同步请求
+    */
     void _HandleAppendEntriesRequest(const AppendEntriesRequest * _Request, google::protobuf::Closure * _Done);
 
+    /**
+     * @brief 处理接收到的心跳/日志同步响应
+    */
     void _HandleAppendEntriesResponse(NodeId _Id, const AppendEntriesResponse * _Response, const google::protobuf::RpcController * _Controller);
 
+    /**
+     * @brief 处理接收到的快照安装请求
+    */
     void _HandleInstallSnapshotRequest(const InstallSnapshotRequest* _Request, google::protobuf::Closure * _Done);
 
+    /**
+     * @brief 处理接收到的快照安装响应
+    */
     void _HandleInstallSnapshotResponse(NodeId _Id, const InstallSnapshotResponse * _Response, const google::protobuf::RpcController * _Controller);
 
+    /**
+     * @brief 处理接收到的客户端操作请求
+    */
     void _HandleKVOperationRequest(const KVOperationRequest * _Request, google::protobuf::Closure * _Done);
 };
 

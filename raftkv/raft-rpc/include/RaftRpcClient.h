@@ -26,10 +26,8 @@ public:
 
 private:
     std::shared_ptr<muduo::net::EventLoop> _Event_loop;
-    std::string _Ip;
-    std::string _Port;
-    std::unique_ptr<RaftService_Stub> _Stub;       // 客户端
     std::unique_ptr<RaftRpcChannel> _Channel;      // 通道
+    std::unique_ptr<RaftService_Stub> _Stub;       // 客户端
 
 public:
     RaftRpcClient(std::shared_ptr<muduo::net::EventLoop> _Event_loop, const std::string & _Ip, const std::string & _Port);

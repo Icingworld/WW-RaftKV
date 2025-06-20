@@ -29,16 +29,16 @@ public:
     class ServiceInfo
     {
     public:
-        std::unique_ptr<google::protobuf::Service> _Service;       // 服务
+        std::unique_ptr<google::protobuf::Service> _Service;        // 服务
         std::unordered_map<std::string, const google::protobuf::MethodDescriptor *> _Method_map; // 方法名-方法描述
     };
 
 private:
-    std::string _Ip;
-    std::string _Port;
+    std::string _Ip;                                                // IP
+    std::string _Port;                                              // 端口
     std::unordered_map<std::string, ServiceInfo> _Service_map;      // 服务名-服务信息
     std::shared_ptr<muduo::net::EventLoop> _Event_loop;             // 事件循环
-    std::unique_ptr<muduo::net::TcpServer> _Server;
+    std::unique_ptr<muduo::net::TcpServer> _Server;                 // Tcp Server
 
     Logger & _Logger;
 
@@ -100,16 +100,16 @@ public:
     class ServiceInfo
     {
     public:
-        std::unique_ptr<google::protobuf::Service> _Service;       // 服务
-        std::unordered_map<std::string, const google::protobuf::MethodDescriptor *> _Method_map; // 方法名-方法描述
+        std::unique_ptr<google::protobuf::Service> _Service;        // 服务
+        std::unordered_map<std::string, const google::protobuf::MethodDescriptor *> _Method_map;    // 方法名-方法描述
     };
 
 private:
-    std::string _Ip;
-    std::string _Port;
+    std::string _Ip;                                                // IP
+    std::string _Port;                                              // 端口
     std::unordered_map<std::string, ServiceInfo> _Service_map;      // 服务名-服务信息
     std::shared_ptr<muduo::net::EventLoop> _Event_loop;             // 事件循环
-    std::unique_ptr<muduo::net::TcpServer> _Server;
+    std::unique_ptr<muduo::net::TcpServer> _Server;                 // Tcp Server
 
     Logger & _Logger;
 

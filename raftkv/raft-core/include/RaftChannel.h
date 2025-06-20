@@ -17,9 +17,9 @@ namespace WW
 class RaftChannel
 {
 private:
-    std::queue<std::unique_ptr<RaftMessage>> _Queue;
-    std::mutex _Mutex;
-    std::condition_variable _Cv;
+    std::queue<std::unique_ptr<RaftMessage>> _Queue;    // 队列
+    std::mutex _Mutex;                                  // 互斥量
+    std::condition_variable _Cv;                        // 条件变量
 
 public:
     RaftChannel() = default;

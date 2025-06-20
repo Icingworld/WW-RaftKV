@@ -113,7 +113,9 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
 
 RaftClerk::~RaftClerk()
 {
-    _Event_loop_client->quit();
+    if (_Running.load()) {
+        stop();
+    }
 }
 
 void RaftClerk::start()
@@ -157,7 +159,12 @@ void RaftClerk::stop()
 {
     _Running.store(false);
 
+    // 关闭 Raft
     _Raft->stop();
+
+    _Event_loop_client->runInLoop([this]() {
+        _Event_loop_client->quit();
+    });
 
     if (_Message_thread.joinable()) {
         _Message_thread.join();
@@ -167,7 +174,7 @@ void RaftClerk::stop()
 void RaftClerk::_GetInnerMessage()
 {
     while (_Running.load()) {
-        std::unique_ptr<RaftMessage> message = std::move(_Raft->readReady(-1));
+        std::unique_ptr<RaftMessage> message = std::move(_Raft->readReady(_Wait_ms));
         if (message != nullptr) {
             _HandleMessage(std::move(message));
         }
