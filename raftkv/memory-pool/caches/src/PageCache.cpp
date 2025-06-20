@@ -1,7 +1,8 @@
 #include "PageCache.h"
 
-#include <Platform.h>
 #include <cassert>
+
+#include <Platform.h>
 
 namespace WW
 {

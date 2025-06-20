@@ -17,9 +17,9 @@ namespace WW
 class RaftChannel
 {
 private:
-    std::queue<std::unique_ptr<RaftMessage>> _Queue;
-    std::mutex _Mutex;
-    std::condition_variable _Cv;
+    std::queue<std::unique_ptr<RaftMessage>> _Queue;    // 队列
+    std::mutex _Mutex;                                  // 互斥量
+    std::condition_variable _Cv;                        // 条件变量
 
 public:
     RaftChannel() = default;
@@ -34,12 +34,10 @@ public:
     void push(RaftMessageType && _Message)
     {
         // 去掉 & 和 const
-        using T = typename std::decay<RaftMessageType>::type;
+        using T = std::decay_t<RaftMessageType>;
 
         // 构造一个消息
-        std::unique_ptr<RaftMessage> ptr = std::unique_ptr<T>(
-            new T(std::forward<RaftMessageType>(_Message))
-        );
+        std::unique_ptr<RaftMessage> ptr = std::make_unique<T>(std::forward<RaftMessageType>(_Message));
 
         {
             std::lock_guard<std::mutex> lock(_Mutex);

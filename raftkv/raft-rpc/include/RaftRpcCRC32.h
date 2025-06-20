@@ -9,6 +9,7 @@ namespace WW
 
 /**
  * @brief CRC32 工具类
+ * @details 单例
 */
 class RaftRpcCRC32
 {

@@ -37,6 +37,7 @@ Raft::Raft(NodeId _Id, const std::vector<RaftPeer> _Peers)
     , _Heartbeat_deadline()
     , _Running(false)
     , _Raft_thread()
+    , _Message_thread()
     , _Logger(Logger::getSyncLogger("Raft"))
 {
     // 设置日志参数
@@ -44,12 +45,15 @@ Raft::Raft(NodeId _Id, const std::vector<RaftPeer> _Peers)
     std::shared_ptr<ConsoleSink> console_sink = std::make_shared<ConsoleSink>();
     _Logger.addSink(console_sink);
 
+    // 初始为 Follower，只需要重置选举超时时间
     _ResetElectionDeadline();
 }
 
 Raft::~Raft()
 {
-    
+    if (_Running.load()) {
+        stop();
+    }
 }
 
 void Raft::start()
@@ -76,6 +80,7 @@ void Raft::stop()
     _Outter_channel.wakeup();
     _Inner_channel.wakeup();
 
+    // 关闭消息队列线程
     if (_Message_thread.joinable()) {
         _Message_thread.join();
     }
@@ -438,7 +443,7 @@ void Raft::_HandleAppendEntriesRequest(const RaftAppendEntriesRequestMessage * _
 
     // 3. 同步日志
     if (!other_entries.empty()) {
-        for (const RaftLogEntry entry : other_entries) {
+        for (const RaftLogEntry & entry : other_entries) {
             _Logs.emplace_back(entry);
         }
 
@@ -760,7 +765,7 @@ void Raft::_HandleKVOperationRequest(const KVOperationRequestMessage * _Message)
         }
 
         // 插入日志条目
-        RaftLogEntry new_entry(_Term, command, kv_operation_response_message.uuid, sequence_id);
+        RaftLogEntry new_entry(_Term, std::move(command), kv_operation_response_message.uuid, sequence_id);
         _Logs.emplace_back(std::move(new_entry));
 
         // 立即持久化

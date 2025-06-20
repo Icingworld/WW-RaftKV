@@ -23,9 +23,7 @@ RaftRpcDispatcher::RaftRpcDispatcher(std::shared_ptr<muduo::net::EventLoop> _Eve
 {
     // 初始化服务端
     muduo::net::InetAddress server_addr(_Ip, std::stoi(_Port));
-    _Server = std::unique_ptr<muduo::net::TcpServer>(
-        new muduo::net::TcpServer(_Event_loop.get(), server_addr, "RaftRpcDispatcher")
-    );
+    _Server = std::make_unique<muduo::net::TcpServer>(_Event_loop.get(), server_addr, "RaftRpcDispatcher");
 
     // 绑定回调函数
     _Server->setConnectionCallback(

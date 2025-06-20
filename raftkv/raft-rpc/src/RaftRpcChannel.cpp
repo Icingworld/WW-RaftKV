@@ -23,9 +23,7 @@ RaftRpcChannel::RaftRpcChannel(std::shared_ptr<muduo::net::EventLoop> _Event_loo
     , _Logger(Logger::getSyncLogger("RaftRpc"))
 {
     // 初始化客户端
-    _Client = std::unique_ptr<muduo::net::TcpClient>(
-        new muduo::net::TcpClient(_Event_loop.get(), _Server_addr, "RaftRpcChannel")
-    );
+    _Client = std::make_unique<muduo::net::TcpClient>(_Event_loop.get(), _Server_addr, "RaftRpcChannel");
 
     // 绑定回调函数
     _Client->setConnectionCallback(

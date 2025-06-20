@@ -8,6 +8,7 @@ target_include_directories(raft-rpc PUBLIC
 
 target_link_libraries(raft-rpc PUBLIC
     WW::logger
+    WW::memory-pool
     third-party
 )
 

@@ -18,7 +18,7 @@ private:
     LogIndex _Match_index;  // 对方已确认的最后日志索引
 
 public:
-    RaftPeer(NodeId _Id);
+    explicit RaftPeer(NodeId _Id);
 
 public:
     /**
