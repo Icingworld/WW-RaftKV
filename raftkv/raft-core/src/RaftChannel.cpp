@@ -7,29 +7,12 @@ namespace WW
 
 std::unique_ptr<RaftMessage> RaftChannel::pop(int _Wait_ms)
 {
-    std::unique_lock<std::mutex> lock(_Mutex);
-    if (_Queue.empty()) {
-        if (_Wait_ms < 0) {
-            return nullptr;
-        }
+    std::unique_ptr<RaftMessage> result;
+    bool success = _Queue.wait_dequeue_timed(result, static_cast<int64_t>(_Wait_ms));
+    if (success)
+        return result;
 
-        if (!_Cv.wait_for(lock, std::chrono::milliseconds(_Wait_ms), [&] {
-            return !_Queue.empty();
-        })) {
-            return nullptr;
-        }
-    }
-
-    // 取出一个消息
-    std::unique_ptr<RaftMessage> ptr = std::move(_Queue.front());
-    _Queue.pop();
-
-    return std::move(ptr);
-}
-
-void RaftChannel::wakeup()
-{
-    _Cv.notify_all();
+    return nullptr;
 }
 
 } // namespace WW

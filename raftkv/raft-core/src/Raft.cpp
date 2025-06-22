@@ -76,10 +76,6 @@ void Raft::stop()
 {
     _Running.store(false);
 
-    // 唤醒所有线程
-    _Outter_channel.wakeup();
-    _Inner_channel.wakeup();
-
     // 关闭消息队列线程
     if (_Message_thread.joinable()) {
         _Message_thread.join();

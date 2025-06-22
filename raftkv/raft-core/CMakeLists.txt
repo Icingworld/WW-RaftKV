@@ -8,6 +8,7 @@ target_include_directories(raft-core PUBLIC
 
 target_link_libraries(raft-core PUBLIC
     WW::logger
+    third-party
 )
 
 add_library(WW::raft-core ALIAS raft-core)

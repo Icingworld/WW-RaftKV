@@ -19,8 +19,11 @@ namespace WW
  * @brief RaftRpcClosure
  * @details 拥有控制器、请求和响应的所有权
 */
-template <typename ControllerType, typename RequestType, typename ResponseType>
-class RaftRpcClientClosure : public google::protobuf::Closure
+template <
+    typename ControllerType,
+    typename RequestType,
+    typename ResponseType
+> class RaftRpcClientClosure : public google::protobuf::Closure
 {
 public:
     // 回调函数类型

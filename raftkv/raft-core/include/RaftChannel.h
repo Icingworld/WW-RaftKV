@@ -1,12 +1,11 @@
 #pragma once
 
 #include <memory>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
 #include <type_traits>
 
 #include <RaftMessage.h>
+
+#include <blockingconcurrentqueue.h>
 
 namespace WW
 {
@@ -17,9 +16,7 @@ namespace WW
 class RaftChannel
 {
 private:
-    std::queue<std::unique_ptr<RaftMessage>> _Queue;    // 队列
-    std::mutex _Mutex;                                  // 互斥量
-    std::condition_variable _Cv;                        // 条件变量
+    moodycamel::BlockingConcurrentQueue<std::unique_ptr<RaftMessage>> _Queue;  // 无锁队列
 
 public:
     RaftChannel() = default;
@@ -31,30 +28,20 @@ public:
      * @brief 向通道添加消息
     */
     template <typename RaftMessageType>
-    void push(RaftMessageType && _Message)
+    void push(RaftMessageType&& _Message)
     {
-        // 去掉 & 和 const
+        // 去除引用和常量限定符
         using T = std::decay_t<RaftMessageType>;
 
-        // 构造一个消息
+        // 构造并入队
         std::unique_ptr<RaftMessage> ptr = std::make_unique<T>(std::forward<RaftMessageType>(_Message));
-
-        {
-            std::lock_guard<std::mutex> lock(_Mutex);
-            _Queue.push(std::move(ptr));
-        }
-        _Cv.notify_one();
+        _Queue.enqueue(std::move(ptr));
     }
 
     /**
-     * @brief 尝试获取通道中的消息
+     * @brief 获取消息，阻塞指定毫秒数
     */
     std::unique_ptr<RaftMessage> pop(int _Wait_ms);
-
-    /**
-     * @brief 唤醒所有等待线程
-    */
-    void wakeup();
 };
 
 } // namespace WW
