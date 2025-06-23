@@ -88,23 +88,30 @@ void Raft::stop()
 void Raft::_RaftLoop()
 {
     while (_Running.load()) {
-        // 计算下一次超时时间
-        std::chrono::steady_clock::time_point next_timeout;
-        if (_Role == RaftRole::Leader) {
-            next_timeout = _Heartbeat_deadline;
-        } else {
-            next_timeout = _Election_deadline;
-        }
+        Timestamp now = std::chrono::steady_clock::now();
 
-        // 判断是否超时
-        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if (now >= _Election_deadline && _Role != RaftRole::Leader) {
+        // 判断是否需要执行操作
+        if (_Role != RaftRole::Leader && now >= _Election_deadline) {
             _Logger.debug("election timeout, switch to candidate and start election");
             _BecomeCandidate();
+            continue;
         }
-        if (now >= _Heartbeat_deadline && _Role == RaftRole::Leader) {
+
+        if (_Role == RaftRole::Leader && now >= _Heartbeat_deadline) {
             _SendAppendEntries(true);
+            continue;
         }
+
+        // 计算下一次应该唤醒的时间
+        Timestamp next_wakeup;
+        if (_Role == RaftRole::Leader) {
+            next_wakeup = _Heartbeat_deadline;
+        } else {
+            next_wakeup = _Election_deadline;
+        }
+
+        // 睡眠直到下一次事件
+        std::this_thread::sleep_until(next_wakeup);
     }
 }
 

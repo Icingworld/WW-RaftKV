@@ -4,8 +4,9 @@
 #include <fstream>
 
 #include <ConsoleSink.h>
-#include <muduo/base/Logging.h>
 #include <RaftSnapshot.pb.h>
+
+#include <muduo/base/Logging.h>
 
 namespace WW
 {
