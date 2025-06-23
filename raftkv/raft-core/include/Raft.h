@@ -109,9 +109,8 @@ public:
 
     /**
      * @brief 从消息队列中读取消息
-     * @param _Wait_ms 读取超时时间（毫秒），`< 0` 则一直等待
     */
-    std::unique_ptr<RaftMessage> readReady(int _Wait_ms);
+    std::unique_ptr<RaftMessage> readReady();
 
     /**
      * @brief 获取本节点 ID

@@ -32,7 +32,8 @@ public:
         GenerateSnapshotRequest,            // 生成快照请求
         GenerateSnapshotResponse,           // 生成快照响应
         ApplySnapshotRequest,               // 应用快照请求
-        ApplySnapshotResponse               // 应用快照响应
+        ApplySnapshotResponse,              // 应用快照响应
+        Shutdown                            // 系统关闭消息
     };
 
     /**
@@ -221,6 +222,12 @@ public:
 
 public:
     ApplySnapshotResponseMessage();
+};
+
+class ShutdownMessage : public RaftMessage
+{
+public:
+    ShutdownMessage();
 };
 
 } // namespace WW

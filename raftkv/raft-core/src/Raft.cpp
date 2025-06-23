@@ -74,8 +74,6 @@ void Raft::startMessage()
 
 void Raft::stop()
 {
-    _Running.store(false);
-
     // 关闭消息队列线程
     if (_Message_thread.joinable()) {
         _Message_thread.join();
@@ -113,16 +111,16 @@ void Raft::_RaftLoop()
 void Raft::_GetOutterMessage()
 {
     while (_Running.load()) {
-        std::unique_ptr<RaftMessage> message = std::move(_Outter_channel.pop(-1));
+        std::unique_ptr<RaftMessage> message = std::move(_Outter_channel.pop());
         if (message != nullptr) {
             _HandleMessage(std::move(message));
         }
     }
 }
 
-std::unique_ptr<RaftMessage> Raft::readReady(int _Wait_ms)
+std::unique_ptr<RaftMessage> Raft::readReady()
 {
-    return std::move(_Inner_channel.pop(_Wait_ms));
+    return std::move(_Inner_channel.pop());
 }
 
 NodeId Raft::getId() const
@@ -181,6 +179,15 @@ void Raft::_HandleMessage(std::unique_ptr<RaftMessage> _Message)
     case RaftMessage::MessageType::ApplySnapshotResponse: {
         const ApplySnapshotResponseMessage * apply_snapshot_response_message = static_cast<const ApplySnapshotResponseMessage *>(_Message.get());
         _HandleApplySnapshot(apply_snapshot_response_message);
+        break;
+    }
+    case RaftMessage::MessageType::Shutdown: {
+        // 关停消息队列和 Raft 循环
+        _Running.store(false);
+
+        // 唤醒 Clerk 消息队列
+        ShutdownMessage shutdown_message;
+        _Inner_channel.push(shutdown_message);
         break;
     }
     default:

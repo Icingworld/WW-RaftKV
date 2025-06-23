@@ -44,7 +44,6 @@ private:
     // 定时器
     std::atomic<bool> _Running;
     std::thread _Message_thread;
-    int _Wait_ms;
 
     // 序列号表
     std::map<uint64_t, RaftRpcServerClosure *> _Pending_requests;

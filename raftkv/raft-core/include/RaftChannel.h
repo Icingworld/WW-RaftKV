@@ -28,7 +28,7 @@ public:
      * @brief 向通道添加消息
     */
     template <typename RaftMessageType>
-    void push(RaftMessageType&& _Message)
+    void push(RaftMessageType && _Message)
     {
         // 去除引用和常量限定符
         using T = std::decay_t<RaftMessageType>;
@@ -41,7 +41,7 @@ public:
     /**
      * @brief 获取消息，阻塞指定毫秒数
     */
-    std::unique_ptr<RaftMessage> pop(int _Wait_ms);
+    std::unique_ptr<RaftMessage> pop();
 };
 
 } // namespace WW
