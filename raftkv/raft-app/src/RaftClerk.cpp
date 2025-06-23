@@ -4,8 +4,9 @@
 #include <fstream>
 
 #include <ConsoleSink.h>
-#include <muduo/base/Logging.h>
 #include <RaftSnapshot.pb.h>
+
+#include <muduo/base/Logging.h>
 
 namespace WW
 {
@@ -23,7 +24,6 @@ RaftClerk::RaftClerk(NodeId _Id, const std::vector<RaftPeerNet> & _Peers)
     , _KVOperation_server(nullptr)
     , _Running(false)
     , _Message_thread()
-    , _Wait_ms(-1)
     , _Pending_requests()
     , _Logger(Logger::getSyncLogger("RaftClerk"))
 {
@@ -159,6 +159,10 @@ void RaftClerk::stop()
 {
     _Running.store(false);
 
+    // 唤醒消息队列
+    ShutdownMessage shutdown_message;
+    _Raft->step(shutdown_message);
+
     // 关闭 Raft
     _Raft->stop();
 
@@ -174,7 +178,7 @@ void RaftClerk::stop()
 void RaftClerk::_GetInnerMessage()
 {
     while (_Running.load()) {
-        std::unique_ptr<RaftMessage> message = std::move(_Raft->readReady(_Wait_ms));
+        std::unique_ptr<RaftMessage> message = std::move(_Raft->readReady());
         if (message != nullptr) {
             _HandleMessage(std::move(message));
         }
@@ -232,6 +236,9 @@ void RaftClerk::_HandleMessage(std::unique_ptr<RaftMessage> _Message)
     case RaftMessage::MessageType::GenerateSnapshotRequest: {
         const GenerateSnapshotRequestMessage * generate_snapshot_request_message = static_cast<const GenerateSnapshotRequestMessage *>(_Message.get());
         _GenerateSnapshot(generate_snapshot_request_message);
+        break;
+    }
+    case RaftMessage::MessageType::Shutdown: {
         break;
     }
     default:

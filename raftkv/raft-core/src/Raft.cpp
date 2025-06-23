@@ -74,12 +74,6 @@ void Raft::startMessage()
 
 void Raft::stop()
 {
-    _Running.store(false);
-
-    // 唤醒所有线程
-    _Outter_channel.wakeup();
-    _Inner_channel.wakeup();
-
     // 关闭消息队列线程
     if (_Message_thread.joinable()) {
         _Message_thread.join();
@@ -94,39 +88,46 @@ void Raft::stop()
 void Raft::_RaftLoop()
 {
     while (_Running.load()) {
-        // 计算下一次超时时间
-        std::chrono::steady_clock::time_point next_timeout;
-        if (_Role == RaftRole::Leader) {
-            next_timeout = _Heartbeat_deadline;
-        } else {
-            next_timeout = _Election_deadline;
-        }
+        Timestamp now = std::chrono::steady_clock::now();
 
-        // 判断是否超时
-        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if (now >= _Election_deadline && _Role != RaftRole::Leader) {
+        // 判断是否需要执行操作
+        if (_Role != RaftRole::Leader && now >= _Election_deadline) {
             _Logger.debug("election timeout, switch to candidate and start election");
             _BecomeCandidate();
+            continue;
         }
-        if (now >= _Heartbeat_deadline && _Role == RaftRole::Leader) {
+
+        if (_Role == RaftRole::Leader && now >= _Heartbeat_deadline) {
             _SendAppendEntries(true);
+            continue;
         }
+
+        // 计算下一次应该唤醒的时间
+        Timestamp next_wakeup;
+        if (_Role == RaftRole::Leader) {
+            next_wakeup = _Heartbeat_deadline;
+        } else {
+            next_wakeup = _Election_deadline;
+        }
+
+        // 睡眠直到下一次事件
+        std::this_thread::sleep_until(next_wakeup);
     }
 }
 
 void Raft::_GetOutterMessage()
 {
     while (_Running.load()) {
-        std::unique_ptr<RaftMessage> message = std::move(_Outter_channel.pop(-1));
+        std::unique_ptr<RaftMessage> message = std::move(_Outter_channel.pop());
         if (message != nullptr) {
             _HandleMessage(std::move(message));
         }
     }
 }
 
-std::unique_ptr<RaftMessage> Raft::readReady(int _Wait_ms)
+std::unique_ptr<RaftMessage> Raft::readReady()
 {
-    return std::move(_Inner_channel.pop(_Wait_ms));
+    return std::move(_Inner_channel.pop());
 }
 
 NodeId Raft::getId() const
@@ -185,6 +186,15 @@ void Raft::_HandleMessage(std::unique_ptr<RaftMessage> _Message)
     case RaftMessage::MessageType::ApplySnapshotResponse: {
         const ApplySnapshotResponseMessage * apply_snapshot_response_message = static_cast<const ApplySnapshotResponseMessage *>(_Message.get());
         _HandleApplySnapshot(apply_snapshot_response_message);
+        break;
+    }
+    case RaftMessage::MessageType::Shutdown: {
+        // 关停消息队列和 Raft 循环
+        _Running.store(false);
+
+        // 唤醒 Clerk 消息队列
+        ShutdownMessage shutdown_message;
+        _Inner_channel.push(shutdown_message);
         break;
     }
     default:

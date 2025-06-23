@@ -78,4 +78,9 @@ ApplySnapshotResponseMessage::ApplySnapshotResponseMessage()
 {
 }
 
+ShutdownMessage::ShutdownMessage()
+    : RaftMessage(MessageType::Shutdown)
+{
+}
+
 } // namespace WW
