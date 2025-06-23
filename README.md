@@ -141,4 +141,4 @@ cd build/example/
 
 使用`perf`工具测试`Leader`节点的性能，测试基于`Debug`模式，`-O2`优化，火焰图如下：
 
-[flamegraph-raftkv.svg](doc/svg/flamegraph-raftkv.svg)
+![flamegraph-raftkv.svg](doc/svg/flamegraph-raftkv.svg)
