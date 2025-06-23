@@ -30,9 +30,9 @@ int main(int argc, char ** argv)
         return -1;
     }
 
-    // 创建 5 个节点
+    // 创建 7 个节点
     std::vector<WW::RaftPeerNet> peers;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 7; ++i) {
         int port = 4396 + i * 2;
         peers.emplace_back(i, "127.0.0.1", std::to_string(port), std::to_string(port + 1));
     }

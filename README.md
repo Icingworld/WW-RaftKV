@@ -1,85 +1,100 @@
 # WW-RaftKV
 
-基于Raft共识算法的分布式 KV 存储
+基于Raft共识算法的分布式`KV`存储
 
 ## 一、简介
 
-该项目是一个基于`Raft`共识算法实现的分布式`KV`存储系统，支持节点容错、高可用部署和一致性日志复制。是`WW`系列中学习分布式系统知识后关于`Raft`的简易实现。
+`WW-RaftKV`是一个基于`Raft`共识算法实现的分布式`KV`存储系统，支持节点容错、高可用部署和一致性日志复制。该项目为`WW`系列的分布式学习项目。
 
-## 二、依赖
+## 二、环境
 
-+ 系统: `Linux` (for `muduo`)
-+ 第三方库: `Protobuf3`
++ 系统：64位`Linux`操作系统
++ `C++`版本：`C++14`
++ 第三方库：
+    + `Protobuf3`
+    + `muduo`
+    + `concurrentqueue`
 
 ## 三、模块
 
-该实现包含了几个核心模块: `KVStore` `RaftRpc` `Raft`
+该实现包含了几个核心模块：`KVStore`，`Logger`，`Memory-Pool`，`Raft-Rpc`，`Raft-Core`和`Raft-App`
 
 ### 1. KVStore
 
-该模块位于`raftkv/kvstore/`，用于提供存分布式存储系统所需要的`KV`存储功能，它的底层实现是跳表。
++ 位于：`raftkv/kvstore/`
++ 功能：是使用跳表实现的`KV`存储，用于提供存分布式存储系统所需要的`KV`存储功能，提供常见的`get`，`put`，`update`和`remove`操作。
 
-### 2. RaftRpc
+### 2. Logger
 
-该模块用于提供`Raft`实现中所需要的`Rpc`功能，模块是基于`Google Rpc`框架的扩展。在该框架中，服务端由`Dispatcher`和`ServiceImpl`组成，并用`Server`封装，`ServiceImpl`提供具体方法实现，`Dispatcher`提供`TcpServer`和服务方法表，处理客户端请求；客户端由`Channel`组成，并用`Client`封装，`Channel`提供具体的`TcpClient`连接实现。
++ 位于：`raftkv/logger`
++ 功能：是一个轻量化的异步日志库，支持自定义格式化输出、同步和异步日志、轮转日志等，用于提供`Raft`运行时必要的日志输出。
 
-#### 服务端
+### 3. Memory-Pool
 
-服务端由以下组件组成: 
++ 位于：`raftkv/memory-pool`
++ 功能：是一个三级缓存的内存池。它由线程缓存、中心缓存、页缓存三层构成，用于在高频的`Rpc`网络通信中，减小`new`/`delete`动态分配带来的内存碎片和开销。
++ 应用场景：在本项目中，内存池用于`Raft`节点的客户端部分内存管理；服务端部分由于本`Raft`实现的异步设计，请求和响应并不在一个线程中，因此暂不使用内存池，交由`Protubuf`的`Arena`管理。
 
-+ `ServiceImpl`: 封装`Raft`协议中各类`RPC`方法的具体处理逻辑，包括`RequestVote`、`AppendEntries`、`InstallSnapshot`，以及客户端操作`KV`存储所需要的`RaftOperate`方法；
-+ `Dispatcher`: 维护服务方法注册表，并内置一个`TcpServer`，用于监听连接并分发请求；
-+ `Server`: 对外提供统一的服务端启动接口，整合`Dispatcher`与`ServiceImpl`。
+### 4. Raft-Rpc
 
-#### 客户端
++ 位于：`raftkv/raft-rpc`
++ 功能：用于提供`Raft`实现中所需要的`Rpc`功能，该模块是基于`Google Rpc`框架的扩展。
 
-客户端由以下组件组成: 
+### 5. Raft-Core
 
-+ `Channel`: 封装对某个`Raft`节点的连接与通信逻辑，内部使用`TcpClient`实现持久连接和异步消息发送；
-+ `Client`: 管理`Channel`实例，提供面向`Raft`协议调用的高层封装，便于发送`RequestVote`、`AppendEntries`和`InstallSnapshot`请求。
++ 位于：`raftkv/raft-core`
++ 功能：实现了`Raft`的核心算法，包括状态机切换、选举、日志复制和推进、心跳等。其核心功能包括：
+    + 节点状态管理：支持`Follower`、`Candidate`、`Leader`三种角色的状态切换；
+    + 选举机制：实现了基于任期的投票逻辑，支持随机超时选举触发与投票限制；
+    + 日志复制：`Leader`将客户端请求转化为日志条目并同步给其他节点；
+    + 日志一致性保障：通过`prevLogIndex`和`prevLogTerm`保证日志匹配性；
+    + 日志提交与应用：日志在被大多数节点确认后提交，并推送给状态机应用；
+    + 心跳机制：`Leader`定期发送心跳保持领导地位并触发空日志复制；
+    + 任期与投票状态持久化：防止重启后错误行为；
+    + 快照与日志压缩支持：适用于长时间运行场景下的日志膨胀问题。
 
-### 3. Raft
+### 6. Raft-App
 
-该模块位于`raftkv/raft-core`，是关于`Raft`的核心算法实现，它采用状态机模式，不关心网络行为，通过上下文与应用层(`RaftClerk`)通信。它负责处理节点间的选举、日志复制、日志提交以及状态同步等关键流程。该模块遵循`Raft`协议的规范设计，具备良好的可读性与可维护性，核心功能包括: 
-
-+ 节点状态管理: 支持`Follower`、`Candidate`、`Leader`三种角色的状态切换；
-+ 选举机制: 实现了基于任期的投票逻辑，支持随机超时选举触发与投票限制；
-+ 日志复制: `Leader`将客户端请求转化为日志条目并同步给其他节点；
-+ 日志一致性保障: 通过`prevLogIndex`和`prevLogTerm`保证日志匹配性；
-+ 日志提交与应用: 日志在被大多数节点确认后提交，并推送给状态机应用；
-+ 心跳机制: `Leader`定期发送心跳保持领导地位并触发空日志复制；
-+ 任期与投票状态持久化: 防止重启后错误行为；
-+ 快照与日志压缩支持: 适用于长时间运行场景下的日志膨胀问题。
++ 位于：`raftkv/raft-app`
++ 功能：实现了`Raft`的应用层，负责节点间的网络通信，并与`Raft`算法层交互。
 
 ## 四、测试
 
-测试代码位于`example/`中，包含了用于模拟启动集群的`raft_example`，使用方法: 
+测试代码位于`example/`中，包含了以下程序和脚本：
+
++ `raft_example`：用于模拟启动集群；
++ `raft_client`：用于模拟客户端操作；
++ `run.sh`：启动节点`2-6`；
++ `stop.sh`：关闭所有`raft_example`进程；
++ `clean.sh`：清理上一次运行痕迹。
+
+`raft_example`使用方法：
 
 ```bash
 ./raft_example n
 ```
 
-其中`n`为节点号，该集群中包含`0-8`共9个节点。`example/`中还有两个`shell`脚本，`run.sh`和`stop.sh`，其中，`run.sh`用于启动`2-8`共7个节点，其日志会重定向到`logs/`中；`stop.sh`强制关闭所有`raft_example`进程。
+其中`n`为节点号，该集群中包含`0-6`共7个节点。`example/`中还有两个`shell`脚本，`run.sh`和`stop.sh`，其中，`run.sh`用于启动`2-6`共5个节点，其日志会重定向到`logs/`中；`stop.sh`强制关闭所有`raft_example`进程；`clean.sh`清理上一次运行产生的痕迹。
 
-`example/`中还包含了用于模拟客户端操作请求的`raft_client`，使用方法: 
+`raft_client`使用方法：
 
 ```bash
 ./raft_client put a b
 ./raft_client get a
+./raft_client update a c
+./raft_client remove a
 ```
 
 `raft_client`默认连接`node 0`，确保在启动集群时，先启动该节点，再启动剩余节点，以保证`node 0`能够当选`Leader`，当`node 0`不为`Leader`时，`raft_client`请求会返回当前`Leader`的`IP`地址和端口用于重定向。
 
-当前存储系统支持的操作有: 
+当前存储系统支持的操作有：
 
-+ `put`: 不允许重复的插入键值对，使用方法为`put {key} {value}`
-+ `update`: 更新或插入键值对，使用方法为`update {key} {value}`
-+ `get`: 读取已存在的键值对，使用方法为`get {key}`
-+ `remove`: 删除已存在的键值对，使用方法为`remove {key}`
++ `put`：不允许重复的插入键值对，使用方法为`put {key} {value}`
++ `update`：更新或插入键值对，使用方法为`update {key} {value}`
++ `get`：读取已存在的键值对，使用方法为`get {key}`
++ `remove`：删除已存在的键值对，使用方法为`remove {key}`
 
 ## 五、快速启动
-
-这是一个快速使用`Raft`测试集群的示例。
 
 ### 1. 编译
 
@@ -91,30 +106,30 @@ make -j4
 
 ### 2. 启动集群
 
-以下按顺序启动。
+以下需按顺序启动。
 
-终端1，启动用于观察`Leader`日志的节点:
++ 窗口1，启动用于观察`Leader`日志的节点:
 
 ```bash
 cd build/example/
 ./raft_example 0
 ```
 
-终端2，启动用于观察`Follower`日志的节点:
++ 窗口2，启动用于观察`Follower`日志的节点：
 
 ```bash
 cd build/example/
 ./raft_example 1
 ```
 
-终端3，启动剩余节点:
++ 窗口3，启动剩余节点：
 
 ```bash
 cd build/example/
 ./run.sh
 ```
 
-终端4，进行想要的操作:
++ 窗口4，进行客户端操作：
 
 ```bash
 cd build/example/
@@ -122,20 +137,8 @@ cd build/example/
 ./raft_client get hello
 ```
 
-### 3. 运行示例
+## 六、性能
 
-+ node 0
+使用`perf`工具测试`Leader`节点的性能，测试基于`Debug`模式，`-O2`优化，火焰图如下：
 
-![node 0](doc/img/node%200.png)
-
-+ node 1
-
-![node 1](doc/img/node%201.png)
-
-+ node 2-8
-
-![node 2-8](doc/img/node%202-8.png)
-
-+ client
-
-![client](doc/img/client.png)
+[flamegraph-raftkv.svg](doc/svg/flamegraph-raftkv.svg)
